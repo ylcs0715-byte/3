@@ -96,11 +96,24 @@
 
             filtered.forEach(item => {
                 container.innerHTML += `
-                    <div class="card">
-                        <h3>${item.name}</h3>
-                        <p><strong>啟動條件：</strong>${item.logic}</p>
-                        <p><strong>限制：</strong>${item.limit}</p>
-                    </div>
+        <div class="card">
+            <h3>${item.name}</h3>
+            <p><strong>💡 基本啟動條件：</strong>${item.logic}</p>
+            
+            <!-- 使用 details 標籤製作摺疊選單 -->
+            <details style="margin-top: 10px; cursor: pointer;">
+                <summary style="color: #007aff; font-size: 14px; font-weight: bold;">
+                    點擊查看更多詳細條件...
+                </summary>
+                <div style="padding: 10px; background: #f9f9f9; border-radius: 8px; margin-top: 8px; font-size: 13px; color: #555; border-left: 3px solid #007aff;">
+                    ${item.moreDetail.replace(/\n/g, '<br>')} <!-- 支援試算表內的換行 -->
+                </div>
+            </details>
+
+            <p style="margin-top: 15px; border-top: 1px dashed #eee; padding-top: 10px;">
+                <strong>⚠️ 運轉限制：</strong>${item.limit}
+            </p>
+        </div>
                 `;
             });
         }

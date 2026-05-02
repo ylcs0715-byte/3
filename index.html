@@ -6,45 +6,28 @@
     <title>所有泵條件查詢</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
-        /* 這裡保留原本的 CSS 樣式... */
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
-        .search-box { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; position: sticky; top: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .search-box { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; position: sticky; top: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 100; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px; }
         .card h3 { margin: 0 0 8px 0; color: #007aff; }
-        .card p { margin: 4px 0; color: #444; font-size: 14px; line-height: 1.5; }
         .loading { text-align: center; color: #888; padding: 20px; }
-        details summary {
-            outline: none;
-            list-style: none; /* 隱藏預設箭頭（選配） */
-            padding: 5px 0;
-        }
-
-        /* 增加一個自訂的小箭頭動畫（選配） */
-        details summary::before {
-            content: "▶ ";
-            font-size: 12px;
-            transition: 0.2s;
-        }
-
-        details[open] summary::before {
-            content: "▼ ";
-            color: #ff9500; /* 展開後變色 */
-        }
+        
+        details summary { outline: none; list-style: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        details summary::before { content: "▶ "; font-size: 12px; transition: 0.2s; display: inline-block; width: 20px; }
+        details[open] summary::before { content: "▼ "; transform: rotate(0deg); color: #ff9500; }
+        .content-box { padding: 15px; background: #fff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6; }
     </style>
 </head>
 <body>
 
-    <input type="text" id="searchInput" class="search-box" placeholder="輸入關鍵字查詢..." onkeyup="filterData()">
+    <input type="text" id="searchInput" class="search-box" placeholder="輸入泵浦名稱查詢..." onkeyup="filterData()">
     <div id="loading" class="loading">正在從雲端載入最新資料...</div>
     <div id="results"></div>
 
     <script>
-        // 1. 請務必確認這裡的 CSV 網址是正確的（結尾應為 output=csv）
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?output=csv"; 
-        
         let allData = [];
 
-        // --- 修正後的 loadData 放在這裡 ---
         async function loadData() {
             try {
                 const response = await fetch(csvUrl);
@@ -58,25 +41,21 @@
                 const rows = text.split(/\r?\n/);
                 
                 allData = rows.slice(1).filter(row => row.trim() !== "").map(row => {
-    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-    if (cols.length >= 1) {
-        // A 欄仍然是名稱
-        const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
-        
-        // 自動判斷：從索引 1 (B 欄) 開始到最後的所有欄位
-        // 使用 filter 過濾掉空的格子，再用 <br> 串接起來
-        const allConditions = cols.slice(1)
-            .map(v => v.replace(/"/g, '').trim())
-            .filter(v => v !== "")
-            .join('<br>');
-
-        return {
-            name: name,
-            combinedLogic: allConditions || "無資料"
-        };
-    }
-    return null;
-}).filter(item => item !== null);
+                    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (cols.length >= 1) {
+                        const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
+                        
+                        // 自動抓取 B 欄之後的所有欄位
+                        const rawCols = cols.slice(1).map(v => v.replace(/"/g, '').trim()).filter(v => v !== "");
+                        
+                        return {
+                            name: name,
+                            // 所有的啟動條件 (B 欄以後)
+                            combinedLogic: rawCols.join('<br>') || "無資料"
+                        };
+                    }
+                    return null;
+                }).filter(item => item !== null);
 
                 if (allData.length === 0) {
                     document.getElementById('loading').innerHTML = "已連線至試算表，但裡面似乎沒有資料。";
@@ -89,47 +68,35 @@
             }
         }
 
-        // 搜尋功能
         function filterData() {
             const query = document.getElementById('searchInput').value.toLowerCase();
             const container = document.getElementById('results');
             container.innerHTML = '';
 
+            // 修正搜尋邏輯：搜尋名稱或合併後的條件內容
             const filtered = allData.filter(item => 
                 item.name.toLowerCase().includes(query) || 
-                item.logic.toLowerCase().includes(query)
+                item.combinedLogic.toLowerCase().includes(query)
             );
 
             filtered.forEach(item => {
-    container.innerHTML += `
-        <div class="card">
-            <h3 style="margin-bottom: 12px; border-left: 5px solid #007aff; padding-left: 10px;">
-                ${item.name}
-            </h3>
-            
-            <details style="margin-bottom: 8px;">
-                <summary style="background-color: #e7f3ff; color: #0056b3; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
-                     啟動條件
-                </summary>
-                <div style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                    ${item.combinedLogic} <!-- 這裡會顯示合併後的 B, C, D 內容 -->
-                </div>
-            </details>
-
-            <details>
-                <summary style="background-color: #fff5f5; color: #c53030; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
-                     自動啟動
-                </summary>
-                <div style="padding: 15px; background: #fff; border: 1px solid #fff5f5; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                    ${item.limit.replace(/\n/g, '<br>')}
-                </div>
-            </details>
-        </div>
-    `;
-});
+                container.innerHTML += `
+                    <div class="card">
+                        <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${item.name}</h3>
+                        
+                        <details style="margin-top: 10px;">
+                            <summary style="background-color: #e7f3ff; color: #0056b3;">
+                                啟動條件
+                            </summary>
+                            <div class="content-box" style="border: 1px solid #e7f3ff;">
+                                ${item.combinedLogic}
+                            </div>
+                        </details>
+                    </div>
+                `;
+            });
         }
 
-        // 執行載入
         loadData();
     </script>
 </body>

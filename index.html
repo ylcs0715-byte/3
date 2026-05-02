@@ -6,6 +6,7 @@
     <title>工程設備查詢</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
+        /* 這裡保留原本的 CSS 樣式... */
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
         .search-box { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; position: sticky; top: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px; }
@@ -16,62 +17,76 @@
 </head>
 <body>
 
-<input type="text" id="searchInput" class="search-box" placeholder="輸入關鍵字查詢..." onkeyup="filterData()">
-<div id="loading" class="loading">正在從雲端載入最新資料...</div>
-<div id="results"></div>
+    <input type="text" id="searchInput" class="search-box" placeholder="輸入關鍵字查詢..." onkeyup="filterData()">
+    <div id="loading" class="loading">正在從雲端載入最新資料...</div>
+    <div id="results"></div>
 
-<script>
-    // 1. 填入你的 Google 試算表 CSV 網址
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?output=csv"; 
-    
-    let allData = [];
+    <script>
+        // 1. 請務必確認這裡的 CSV 網址是正確的（結尾應為 output=csv）
+        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?output=csv"; 
+        
+        let allData = [];
 
-    // 2. 從 Google 試算表抓取資料
-    async function loadData() {
-        try {
-            const response = await fetch(csvUrl);
-            const text = await response.text();
-            const rows = text.split('\n');
-            
-            // 解析 CSV (跳過第一列標題)
-            allData = rows.slice(1).map(row => {
-                const cols = row.split(',');
-                if (cols.length >= 3) {
-                    return { name: cols[0], logic: cols[1], limit: cols[2] };
+        // --- 修正後的 loadData 放在這裡 ---
+        async function loadData() {
+            try {
+                const response = await fetch(csvUrl);
+                const text = await response.text();
+
+                if (text.includes("<!DOCTYPE html>")) {
+                    document.getElementById('loading').innerHTML = "<b style='color:red;'>網址錯誤：請確認發佈格式為 CSV。</b>";
+                    return;
                 }
-                return null;
-            }).filter(item => item !== null);
 
-            document.getElementById('loading').style.display = 'none';
-            filterData();
-        } catch (error) {
-            document.getElementById('loading').innerText = "載入失敗，請檢查網路連接。";
+                const rows = text.split(/\r?\n/);
+                
+                allData = rows.slice(1).filter(row => row.trim() !== "").map(row => {
+                    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (cols.length >= 2) {
+                        return {
+                            name: cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名",
+                            logic: cols[1] ? cols[1].replace(/"/g, '').trim() : "無邏輯資料",
+                            limit: cols[2] ? cols[2].replace(/"/g, '').trim() : "-"
+                        };
+                    }
+                    return null;
+                }).filter(item => item !== null);
+
+                if (allData.length === 0) {
+                    document.getElementById('loading').innerHTML = "已連線至試算表，但裡面似乎沒有資料。";
+                } else {
+                    document.getElementById('loading').style.display = 'none';
+                    filterData();
+                }
+            } catch (error) {
+                document.getElementById('loading').innerText = "連線失敗，請檢查網路。";
+            }
         }
-    }
 
-    // 3. 搜尋過濾功能
-    function filterData() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const container = document.getElementById('results');
-        container.innerHTML = '';
+        // 搜尋功能
+        function filterData() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const container = document.getElementById('results');
+            container.innerHTML = '';
 
-        const filtered = allData.filter(item => 
-            item.name.toLowerCase().includes(query) || 
-            item.logic.toLowerCase().includes(query)
-        );
+            const filtered = allData.filter(item => 
+                item.name.toLowerCase().includes(query) || 
+                item.logic.toLowerCase().includes(query)
+            );
 
-        filtered.forEach(item => {
-            container.innerHTML += `
-                <div class="card">
-                    <h3>${item.name}</h3>
-                    <p><strong>邏輯：</strong>${item.logic}</p>
-                    <p><strong>限制：</strong>${item.limit}</p>
-                </div>
-            `;
-        });
-    }
+            filtered.forEach(item => {
+                container.innerHTML += `
+                    <div class="card">
+                        <h3>${item.name}</h3>
+                        <p><strong>邏輯：</strong>${item.logic}</p>
+                        <p><strong>限制：</strong>${item.limit}</p>
+                    </div>
+                `;
+            });
+        }
 
-    loadData();
-</script>
+        // 執行載入
+        loadData();
+    </script>
 </body>
 </html>

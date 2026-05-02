@@ -59,17 +59,23 @@
                 
                 allData = rows.slice(1).filter(row => row.trim() !== "").map(row => {
                     const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (cols.length >= 2) {
-                        return {
-                            name: cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名",
-                            logic: cols[1] ? cols[1].replace(/"/g, '').trim() : "無邏輯資料",
-                            logic: cols[2] ? cols[2].replace(/"/g, '').trim() : "無邏輯資料",
-                            limit: cols[5] ? cols[2].replace(/"/g, '').trim() : "-",
-                            // 新增：抓取第 4 欄 (索引為 3) 的詳細條件
-                            moreDetail: cols[3] ? cols[3].replace(/"/g, '').trim() : "尚無詳細說明"
-                        };
-                    }
-                    return null;
+                    if (cols.length >= 3) { // 確保至少有 3 欄資料 (名稱、啟動條件、限制)
+                    return {
+                    // cols[0] 對應 A 欄 (名稱)
+                    name: cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名",
+        
+                    // cols[1] 對應 B 欄 (啟動條件)
+                    logic: cols[1] ? cols[1].replace(/"/g, '').trim() : "無邏輯資料",
+        
+                    // cols[2] 對應 C 欄 (運轉限制)
+                    // 注意：這裡不要重複寫兩次 logic，且索引應為 [2]
+                    limit: cols[2] ? cols[2].replace(/"/g, '').trim() : "-",
+        
+                    // 如果你有第 4 欄 (D 欄)，則對應索引 [3]
+                    moreDetail: cols[3] ? cols[3].replace(/"/g, '').trim() : "尚無詳細說明"
+                    };
+                }
+                return null;
                 }).filter(item => item !== null);
 
                 if (allData.length === 0) {

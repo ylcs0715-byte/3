@@ -41,21 +41,30 @@
                 const rows = text.split(/\r?\n/);
                 
                 allData = rows.slice(1).filter(row => row.trim() !== "").map(row => {
-                    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (cols.length >= 1) {
-                        const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
-                        
-                        // 自動抓取 B 欄之後的所有欄位
-                        const rawCols = cols.slice(1).map(v => v.replace(/"/g, '').trim()).filter(v => v !== "");
-                        
-                        return {
-                            name: name,
-                            // 所有的啟動條件 (B 欄以後)
-                            combinedLogic: rawCols.join('<br>') || "無資料"
-                        };
-                    }
-                    return null;
-                }).filter(item => item !== null);
+    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+    if (cols.length >= 1) {
+        const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
+        
+        // 抓取 B~M 欄 (索引 1 到 12，所以 slice 到 13)
+        const startLogic = cols.slice(1, 13)
+            .map(v => v.replace(/"/g, '').trim())
+            .filter(v => v !== "")
+            .join('<br>');
+            
+        // 抓取 N 欄之後 (索引 13 開始) 的所有內容
+        const autoLogic = cols.slice(13)
+            .map(v => v.replace(/"/g, '').trim())
+            .filter(v => v !== "")
+            .join('<br>');
+
+        return {
+            name: name,
+            combinedLogic: startLogic || "無啟動條件資料",
+            autoStart: autoLogic || "無自動啟動資料"
+        };
+    }
+    return null;
+}).filter(item => item !== null);
 
                 if (allData.length === 0) {
                     document.getElementById('loading').innerHTML = "已連線至試算表，但裡面似乎沒有資料。";
@@ -69,33 +78,44 @@
         }
 
         function filterData() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const container = document.getElementById('results');
-            container.innerHTML = '';
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const container = document.getElementById('results');
+    container.innerHTML = '';
 
-            // 修正搜尋邏輯：搜尋名稱或合併後的條件內容
-            const filtered = allData.filter(item => 
-                item.name.toLowerCase().includes(query) || 
-                item.combinedLogic.toLowerCase().includes(query)
-            );
+    const filtered = allData.filter(item => 
+        item.name.toLowerCase().includes(query) || 
+        item.combinedLogic.toLowerCase().includes(query) ||
+        item.autoStart.toLowerCase().includes(query)
+    );
 
-            filtered.forEach(item => {
-                container.innerHTML += `
-                    <div class="card">
-                        <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${item.name}</h3>
-                        
-                        <details style="margin-top: 10px;">
-                            <summary style="background-color: #e7f3ff; color: #0056b3;">
-                                啟動條件
-                            </summary>
-                            <div class="content-box" style="border: 1px solid #e7f3ff;">
-                                ${item.combinedLogic}
-                            </div>
-                        </details>
+    filtered.forEach(item => {
+        container.innerHTML += `
+            <div class="card">
+                <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${item.name}</h3>
+                
+                <!-- 第一個摺疊：啟動條件 (B~M) -->
+                <details style="margin-top: 10px; margin-bottom: 8px;">
+                    <summary style="background-color: #e7f3ff; color: #0056b3; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
+                         啟動條件 (B~M)
+                    </summary>
+                    <div style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
+                        ${item.combinedLogic}
                     </div>
-                `;
-            });
-        }
+                </details>
+
+                <!-- 第二個摺疊：自動啟動 (N~Z) -->
+                <details>
+                    <summary style="background-color: #fff5f5; color: #c53030; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
+                         自動啟動 (N~Z)
+                    </summary>
+                    <div style="padding: 15px; background: #fff; border: 1px solid #fff5f5; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
+                        ${item.autoStart}
+                    </div>
+                </details>
+            </div>
+        `;
+    });
+}
 
         loadData();
     </script>

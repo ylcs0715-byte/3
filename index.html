@@ -13,6 +13,23 @@
         .card h3 { margin: 0 0 8px 0; color: #007aff; }
         .card p { margin: 4px 0; color: #444; font-size: 14px; line-height: 1.5; }
         .loading { text-align: center; color: #888; padding: 20px; }
+        details summary {
+            outline: none;
+            list-style: none; /* 隱藏預設箭頭（選配） */
+            padding: 5px 0;
+        }
+
+        /* 增加一個自訂的小箭頭動畫（選配） */
+        details summary::before {
+            content: "▶ ";
+            font-size: 12px;
+            transition: 0.2s;
+        }
+
+        details[open] summary::before {
+            content: "▼ ";
+            color: #ff9500; /* 展開後變色 */
+        }
     </style>
 </head>
 <body>
@@ -46,7 +63,8 @@
                         return {
                             name: cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名",
                             logic: cols[1] ? cols[1].replace(/"/g, '').trim() : "無邏輯資料",
-                            limit: cols[2] ? cols[2].replace(/"/g, '').trim() : "-",
+                            logic: cols[2] ? cols[2].replace(/"/g, '').trim() : "無邏輯資料",
+                            limit: cols[5] ? cols[2].replace(/"/g, '').trim() : "-",
                             // 新增：抓取第 4 欄 (索引為 3) 的詳細條件
                             moreDetail: cols[3] ? cols[3].replace(/"/g, '').trim() : "尚無詳細說明"
                         };

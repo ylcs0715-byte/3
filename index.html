@@ -97,22 +97,29 @@
             filtered.forEach(item => {
                 container.innerHTML += `
         <div class="card">
-            <h3>${item.name}</h3>
-            <p><strong>💡 基本啟動條件：</strong>${item.logic}</p>
+            <h3 style="margin-bottom: 12px; color: #333; border-left: 5px solid #007aff; padding-left: 10px;">
+                ${item.name}
+            </h3>
             
-            <!-- 使用 details 標籤製作摺疊選單 -->
-            <details style="margin-top: 10px; cursor: pointer;">
-                <summary style="color: #007aff; font-size: 14px; font-weight: bold;">
-                    點擊查看更多詳細條件...
+            <!-- 第一個獨立區塊：啟動條件 -->
+            <details style="margin-bottom: 8px;">
+                <summary style="background-color: #e7f3ff; color: #0056b3; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
+                    ▶ 啟動條件
                 </summary>
-                <div style="padding: 10px; background: #f9f9f9; border-radius: 8px; margin-top: 8px; font-size: 13px; color: #555; border-left: 3px solid #007aff;">
-                    ${item.moreDetail.replace(/\n/g, '<br>')} <!-- 支援試算表內的換行 -->
+                <div style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
+                    ${item.logic.replace(/\n/g, '<br>')}
                 </div>
             </details>
 
-            <p style="margin-top: 15px; border-top: 1px dashed #eee; padding-top: 10px;">
-                <strong>⚠️ 運轉限制：</strong>${item.limit}
-            </p>
+            <!-- 第二個獨立區塊：運轉限制 -->
+            <details>
+                <summary style="background-color: #fff5f5; color: #c53030; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
+                    ▶ 運轉限制
+                </summary>
+                <div style="padding: 15px; background: #fff; border: 1px solid #fff5f5; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
+                    ${item.limit.replace(/\n/g, '<br>')}
+                </div>
+            </details>
         </div>
                 `;
             });

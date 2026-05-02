@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>工程參數查詢</title>
+    <!-- 讓網頁看起來像 App 的設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+        .search-box { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; margin-bottom: 20px; box-sizing: border-box; }
+        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 10px; }
+        .card h3 { margin: 0 0 5px 0; color: #007aff; font-size: 18px; }
+        .card p { margin: 5px 0; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <input type="text" id="searchInput" class="search-box" placeholder="輸入關鍵字查詢 (例如：泵浦, 壓力)..." onkeyup="filterData()">
+    
+    <div id="results"></div>
+
+    <script>
+        // 這裡放你的小量資料
+        const data = [
+            { name: "CWP 循環水泵", logic: "啟動前需開啟出口閥 15%", limit: "電流不可超過 180A" },
+            { name: "CP 凝結水泵", logic: "出口壓力低於 1.2MPa 跳脫", limit: "軸承溫度 < 80°C" },
+            { name: "非逆止閥規格", logic: "用於防止流體倒灌", limit: "壓力等級 PN25" },
+            { name: "徑向軸承", logic: "支撐轉子徑向負荷", limit: "間隙 0.12-0.15mm" }
+        ];
+
+        function filterData() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const container = document.getElementById('results');
+            container.innerHTML = '';
+
+            const filtered = data.filter(item => 
+                item.name.toLowerCase().includes(query) || 
+                item.logic.toLowerCase().includes(query)
+            );
+
+            filtered.forEach(item => {
+                container.innerHTML += `
+                    <div class="card">
+                        <h3>${item.name}</h3>
+                        <p><strong>邏輯：</strong>${item.logic}</p>
+                        <p><strong>限制：</strong>${item.limit}</p>
+                    </div>
+                `;
+            });
+        }
+        // 初始顯示全部
+        filterData();
+    </script>
+</body>
+</html>

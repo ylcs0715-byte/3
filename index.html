@@ -59,24 +59,22 @@
                 
                 allData = rows.slice(1).filter(row => row.trim() !== "").map(row => {
                     const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (cols.length >= 3) { // 確保至少有 3 欄資料 (名稱、啟動條件、限制)
+                    if (cols.length >= 1) {
+                    // 將 B, C, D 欄位的內容抓出來並去除引號與空格
+                    const bVal = cols[1] ? cols[1].replace(/"/g, '').trim() : "";
+                    const cVal = cols[2] ? cols[2].replace(/"/g, '').trim() : "";
+                    const dVal = cols[3] ? cols[3].replace(/"/g, '').trim() : "";
+
                     return {
-                    // cols[0] 對應 A 欄 (名稱)
                     name: cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名",
-        
-                    // cols[1] 對應 B 欄 (啟動條件)
-                    logic: cols[1] ? cols[1].replace(/"/g, '').trim() : "無邏輯資料",
-        
-                    // cols[2] 對應 C 欄 (運轉限制)
-                    // 注意：這裡不要重複寫兩次 logic，且索引應為 [2]
-                    limit: cols[2] ? cols[2].replace(/"/g, '').trim() : "-",
-        
-                    // 如果你有第 4 欄 (D 欄)，則對應索引 [3]
-                    moreDetail: cols[3] ? cols[3].replace(/"/g, '').trim() : "尚無詳細說明"
+                    // 合併 B, C, D 欄位內容，中間加入換行符號
+                    combinedLogic: [bVal, cVal, dVal].filter(v => v !== "").join('<br>'),
+                    // 原本的運轉限制改為 E 欄 (索引 4) 或是維持原本邏輯
+                    limit: cols[4] ? cols[4].replace(/"/g, '').trim() : "無限制"
                     };
                 }
                 return null;
-                }).filter(item => item !== null);
+            }).filter(item => item !== null);
 
                 if (allData.length === 0) {
                     document.getElementById('loading').innerHTML = "已連線至試算表，但裡面似乎沒有資料。";
@@ -101,23 +99,21 @@
             );
 
             filtered.forEach(item => {
-                container.innerHTML += `
+    container.innerHTML += `
         <div class="card">
-            <h3 style="margin-bottom: 12px; color: #333; border-left: 5px solid #007aff; padding-left: 10px;">
+            <h3 style="margin-bottom: 12px; border-left: 5px solid #007aff; padding-left: 10px;">
                 ${item.name}
             </h3>
             
-            <!-- 第一個獨立區塊：啟動條件 -->
             <details style="margin-bottom: 8px;">
                 <summary style="background-color: #e7f3ff; color: #0056b3; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
                      啟動條件
                 </summary>
                 <div style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                    ${item.logic.replace(/\n/g, '<br>')}
+                    ${item.combinedLogic} <!-- 這裡會顯示合併後的 B, C, D 內容 -->
                 </div>
             </details>
 
-            <!-- 第二個獨立區塊：運轉限制 -->
             <details>
                 <summary style="background-color: #fff5f5; color: #c53030; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
                      運轉限制
@@ -127,8 +123,8 @@
                 </div>
             </details>
         </div>
-                `;
-            });
+    `;
+});
         }
 
         // 執行載入

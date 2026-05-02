@@ -70,7 +70,7 @@
                     // 合併 B, C, D 欄位內容，中間加入換行符號
                     combinedLogic: [bVal, cVal, dVal].filter(v => v !== "").join('<br>'),
                     // 原本的運轉限制改為 E 欄 (索引 4) 或是維持原本邏輯
-                    limit: cols[4] ? cols[4].replace(/"/g, '').trim() : "無限制"
+                    limit: cols[4] ? cols[4].replace(/"/g, '').trim() : "-"
                     };
                 }
                 return null;

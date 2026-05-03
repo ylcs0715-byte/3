@@ -6,12 +6,46 @@
     <title>所有泵條件查詢</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
+            .search-container {
+        position: sticky;
+        top: 10px;
+        z-index: 100;
+        margin-bottom: 15px;
+        }
+
+    /* 覆蓋原本 search-box 的 margin，因為外層已有 margin */
+    .search-box {
+        width: 100%;
+        padding: 15px 40px 15px 15px; /* 右邊留空間給 X */
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        box-sizing: border-box;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+    #clearButton {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 20px;
+        color: #ccc;
+        cursor: pointer;
+        display: none; /* 預設隱藏 */
+    }
+
+    #clearButton:hover {
+        color: #888;
+    }
+        
             mark { 
         background-color: yellow;
         color: black;
         padding: 0 2px;
         border-radius: 2px;
         }
+        
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
         .search-box { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; position: sticky; top: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 100; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px; }
@@ -26,14 +60,26 @@
 </head>
 <body>
 
+    <div class="search-container">
     <input type="text" id="searchInput" class="search-box" placeholder="輸入關鍵字查詢..." onkeyup="filterData()">
+    <span id="clearButton" onclick="clearSearch()">✕</span>
+</div>
     <div id="loading" class="loading">正在從雲端載入最新資料...</div>
     <div id="results"></div>
 
     <script>
+        
         const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?output=csv"; 
         let allData = [];
 
+function clearSearch() {
+    const input = document.getElementById('searchInput');
+    input.value = '';
+    document.getElementById('clearButton').style.display = 'none';
+    filterData(); // 重新整理顯示全部資料
+    input.focus(); // 讓游標回到輸入框
+}
+       
         async function loadData() {
             try {
                 const response = await fetch(csvUrl);
@@ -91,6 +137,13 @@
         }
 
         function filterData() {
+    const input = document.getElementById('searchInput');
+    const query = input.value.trim().toLowerCase();
+    const clearBtn = document.getElementById('clearButton');
+
+    // 判斷是否顯示清除按鈕
+    clearBtn.style.display = query.length > 0 ? 'block' : 'none';
+            
     const query = document.getElementById('searchInput').value.trim().toLowerCase();
     const container = document.getElementById('results');
     container.innerHTML = '';

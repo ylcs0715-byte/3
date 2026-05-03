@@ -46,7 +46,7 @@
         const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
         
         // 抓取 B~Z 欄 (索引 1 到 25)
-        const startLogic = cols.slice(1, 25)
+        const startLogic = cols.slice(1, 26)
             .map(v => v.replace(/"/g, '').trim())
             .filter(v => v !== "")
             .join('<br>');
@@ -58,7 +58,7 @@
             .join('<br>');
 
         // 抓取 BA~BZ 欄 (索引 53 到 79)
-        const tripLogic = cols.slice(53, 79)
+        const tripLogic = cols.slice(52, 78)
             .map(v => v.replace(/"/g, '').trim())
             .filter(v => v !== "")
             .join('<br>');

@@ -45,14 +45,14 @@
     if (cols.length >= 1) {
         const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
         
-        // 抓取 B~M 欄 (索引 1 到 12，所以 slice 到 13)
-        const startLogic = cols.slice(1, 13)
+        // 抓取 B~Z 欄 (索引 1 到 25)
+        const startLogic = cols.slice(1, 25)
             .map(v => v.replace(/"/g, '').trim())
             .filter(v => v !== "")
             .join('<br>');
             
-        // 抓取 N 欄之後 (索引 13 開始) 的所有內容
-        const autoLogic = cols.slice(13)
+        // 抓取 AA~AZ 欄 (索引 26 到 52)
+        const autoLogic = cols.slice(26, 52)
             .map(v => v.replace(/"/g, '').trim())
             .filter(v => v !== "")
             .join('<br>');

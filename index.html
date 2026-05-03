@@ -6,6 +6,12 @@
     <title>所有泵條件查詢</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
+            mark { 
+        background-color: yellow;
+        color: black;
+        padding: 0 2px;
+        border-radius: 2px;
+        }
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
         .search-box { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; position: sticky; top: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 100; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px; }
@@ -85,48 +91,66 @@
         }
 
         function filterData() {
-    const query = document.getElementById('searchInput').value.toLowerCase();
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
     const container = document.getElementById('results');
     container.innerHTML = '';
 
+    if (allData.length === 0) return;
+
+    // 搜尋過濾
     const filtered = allData.filter(item => 
         item.name.toLowerCase().includes(query) || 
         item.combinedLogic.toLowerCase().includes(query) ||
-        item.autoStart.toLowerCase().includes(query)
+        item.autoStart.toLowerCase().includes(query) ||
+        item.tripLogic.toLowerCase().includes(query)
     );
 
+    // 高亮處理函式
+    const highlight = (text, q) => {
+        if (!q) return text;
+        const regex = new RegExp(`(${q})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    };
+
     filtered.forEach(item => {
+        // 判斷各個區塊是否包含關鍵字，決定是否自動打開 (open)
+        const isLogicOpen = query && item.combinedLogic.toLowerCase().includes(query) ? 'open' : '';
+        const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';
+        const isTripOpen = query && item.tripLogic.toLowerCase().includes(query) ? 'open' : '';
+
         container.innerHTML += `
             <div class="card">
-                <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${item.name}</h3>
+                <h3 style="border-left: 5px solid #007aff; padding-left: 10px; color: #333; margin-bottom: 12px;">
+                    ${highlight(item.name, query)}
+                </h3>
                 
                 <!-- 第一個摺疊：啟動條件 -->
-                <details style="margin-top: 10px; margin-bottom: 8px;">
+                <details ${isLogicOpen} style="margin-top: 10px; margin-bottom: 8px;">
                     <summary style="background-color: #e7f3ff; color: #0056b3; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
-                         啟動條件
+                        啟動條件
                     </summary>
                     <div style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${item.combinedLogic}
+                        ${highlight(item.combinedLogic, query)}
                     </div>
                 </details>
 
                 <!-- 第二個摺疊：自動啟動 -->
-                <details style="margin-top: 10px; margin-bottom: 8px;">
+                <details ${isAutoOpen} style="margin-bottom: 8px;">
                     <summary style="background-color: #ebfbee; color: #2b8a3e; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
-                         自動啟動
+                        自動啟動
                     </summary>
                     <div style="padding: 15px; background: #fff; border: 1px solid #ebfbee; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${item.autoStart}
+                        ${highlight(item.autoStart, query)}
                     </div>
                 </details>
-                
+
                 <!-- 第三個摺疊：跳脫邏輯 -->
-                <details>
-                    <summary style="background-color: #fff5f5; color: #c53030; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
-                         跳脫邏輯
+                <details ${isTripOpen}>
+                    <summary style="background-color: #fff5f5; color: #c92a2a; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
+                        跳脫邏輯
                     </summary>
                     <div style="padding: 15px; background: #fff; border: 1px solid #fff5f5; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${item.tripLogic}
+                        ${highlight(item.tripLogic, query)}
                     </div>
                 </details>
             </div>

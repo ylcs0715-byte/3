@@ -57,10 +57,17 @@
             .filter(v => v !== "")
             .join('<br>');
 
+        // 抓取 BA~BZ 欄 (索引 53 到 79)
+        const tripLogic = cols.slice(53, 79)
+            .map(v => v.replace(/"/g, '').trim())
+            .filter(v => v !== "")
+            .join('<br>');
+
         return {
             name: name,
             combinedLogic: startLogic || "無啟動條件資料",
-            autoStart: autoLogic || "無自動啟動資料"
+            autoStart: autoLogic || "無自動啟動資料",
+            tripLogic: tripLogic || "無跳脫邏輯資料"
         };
     }
     return null;
@@ -119,7 +126,7 @@
                          跳脫邏輯
                     </summary>
                     <div style="padding: 15px; background: #fff; border: 1px solid #fff5f5; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${item.autoStart}
+                        ${item.tripLogic}
                     </div>
                 </details>
             </div>

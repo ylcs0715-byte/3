@@ -6,6 +6,17 @@
     <title>所有泵條件查詢</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
+
+        .content-box { 
+    padding: 15px; 
+    background: #fff; 
+    border: 1px solid #ddd; /* 增加邊框 */
+    border-top: none;       /* 移除上方邊框 */
+    border-radius: 0 0 8px 8px; 
+    font-size: 15px; 
+    line-height: 1.6; 
+    }
+        
             .search-container {
         position: sticky;
         top: 10px;
@@ -138,13 +149,12 @@ function clearSearch() {
 
         function filterData() {
     const input = document.getElementById('searchInput');
-    const query = input.value.trim().toLowerCase();
+    const query = input.value.trim().toLowerCase(); // 保留這行
     const clearBtn = document.getElementById('clearButton');
-
-    // 判斷是否顯示清除按鈕
-    clearBtn.style.display = query.length > 0 ? 'block' : 'none';
-            
     const container = document.getElementById('results');
+    
+    // 顯示或隱藏清除按鈕
+    clearBtn.style.display = query.length > 0 ? 'block' : 'none';
     container.innerHTML = '';
 
     if (allData.length === 0) return;

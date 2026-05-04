@@ -100,21 +100,23 @@
     <div id="loading" class="loading">正在從雲端載入最新資料...</div>
     <div id="results"></div>
 
-    <script>
-// 確保這兩行在 <script> 最上方
+<script>
+// 1. 設定網址與全域變數
 const termCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?gid=1982312478&single=true&output=csv"; 
+const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?output=csv"; 
 let termMap = {}; 
+let allData = [];
 
+// 2. 載入術語字典 (從第二分頁)
 async function loadTerms() {
     try {
         const response = await fetch(termCsvUrl);
         const text = await response.text();
         const rows = text.split(/\r?\n/);
-        
         termMap = {}; 
         rows.slice(1).forEach(row => {
             if (!row.trim()) return;
-            // 使用正則拆分 CSV，處理包含引號的欄位
+            // 嚴謹拆分 CSV
             const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length >= 2) {
                 const term = cols[0].replace(/^"|"$/g, '').trim();
@@ -122,215 +124,127 @@ async function loadTerms() {
                 if (term) termMap[term] = definition;
             }
         });
-        console.log("術語字典載入成功:", termMap);[cite: 2]
+        console.log("字典載入成功:", termMap);[cite: 2]
     } catch (e) {
-        console.error("術語載入失敗:", e);[cite: 2]
+        console.error("術語載入失敗:", e);
     }
 }
 
-// --- 將文字中的術語轉換為可點擊連結 ---
+// 3. 處理術語點擊連結 (修正相容性問題)
 function applyTermLinks(text) {
     if (!text || Object.keys(termMap).length === 0) return text;[cite: 2]
     let newText = text;
     
-    const terms = Object.keys(termMap).sort((a, b) => b.length - a.length);[cite: 2]
+    // 按長度排序，確保「LP Eco. Filled」優先匹配[cite: 2]
+    const terms = Object.keys(termMap).sort((a, b) => b.length - a.length); 
 
     terms.forEach(term => {
         const cleanTerm = term.trim();
-        if (!cleanTerm) return;[cite: 2]
+        if (!cleanTerm) return;
         
+        // 轉義特殊符號並使用相容性高的 RegExp[cite: 2]
         const escapedTerm = cleanTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // 加入 'i' flag 進行不分大小寫比對
-        const regex = new RegExp(`(${escapedTerm})`, 'gi'); 
+        const regex = new RegExp('(' + escapedTerm + ')', 'gi'); 
         
-        newText = newText.replace(regex, (match) => {
-            // 使用原始匹配到的字串 (match) 以保持畫面美觀[cite: 2]
-            return `<span class="term-link" onclick="event.stopPropagation(); showTermModal('${cleanTerm}')">${match}</span>`;[cite: 2]
+        newText = newText.replace(regex, function(match) {
+            return '<span class="term-link" onclick="event.stopPropagation(); showTermModal(\'' + cleanTerm + '\')">' + match + '</span>';
         });
     });
     return newText;
 }
 
-// --- 顯示彈出視窗 ---
+// 4. 顯示彈窗[cite: 2]
 function showTermModal(term) {
     const definition = termMap[term] || "目前無相關解釋資料。";
-    // 使用簡單的 alert 或是自訂 Modal
-    alert(`${term}：\n\n${definition}`);
+    alert(term + "：\n\n" + definition);
 }
 
-// --- 修改初始化順序 ---
-async function initApp() {
-    const loadingDiv = document.getElementById('loading');
-    loadingDiv.innerText = "正在從雲端載入術語與資料...";[cite: 2]
-    
-    // 1. 優先載入術語表 (第二分頁)
-    await loadTerms();[cite: 1, 2]
-    
-    // 【新增除錯檢查】檢查字典是否真的抓到資料
-    if (Object.keys(termMap).length === 0) {
-        console.warn("術語字典載入失敗，請檢查 termCsvUrl 是否正確。");
-        // 如果是在手機上測試，可以暫時取消下面這行的註解來跳出提醒
-        // alert("術語字典載入失敗！");
-    } else {
-        console.log("術語字典載入成功，項目數：", Object.keys(termMap).length);[cite: 1, 2]
-    }
-    
-    // 2. 再載入泵浦資料 (第一分頁)
-    await loadData();[cite: 1, 2]
-}
-
-// 確保這行在腳本最後面，用來啟動程式
-initApp();[cite: 1, 2]
-
-        
-        
-        const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?output=csv"; 
-        let allData = [];
-
-function clearSearch() {
-    const input = document.getElementById('searchInput');
-    input.value = '';
-    document.getElementById('clearButton').style.display = 'none';
-    filterData(); // 重新整理顯示全部資料
-    input.focus(); // 讓游標回到輸入框
-}
-       
-        async function loadData() {
-            try {
-                const response = await fetch(csvUrl);
-                const text = await response.text();
-
-                if (text.includes("<!DOCTYPE html>")) {
-                    document.getElementById('loading').innerHTML = "<b style='color:red;'>網址錯誤：請確認發佈格式為 CSV。</b>";
-                    return;
-                }
-
-                const rows = text.split(/\r?\n/);
-                
-                allData = rows.slice(1).filter(row => row.trim() !== "").map(row => {
-    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-    if (cols.length >= 1) {
-        const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
-        
-        // 抓取 B~Z 欄 (索引 1 到 25)
-        const startLogic = cols.slice(1, 26)
-            .map(v => v.replace(/"/g, '').trim())
-            .filter(v => v !== "")
-            .join('<br>');
-            
-        // 抓取 AA~AZ 欄 (索引 26 到 52)
-        const autoLogic = cols.slice(26, 52)
-            .map(v => v.replace(/"/g, '').trim())
-            .filter(v => v !== "")
-            .join('<br>');
-
-        // 抓取 BA~BZ 欄 (索引 53 到 79)
-        const tripLogic = cols.slice(52, 78)
-            .map(v => v.replace(/"/g, '').trim())
-            .filter(v => v !== "")
-            .join('<br>');
-
-        return {
-            name: name,
-            combinedLogic: startLogic || "無啟動條件資料",
-            autoStart: autoLogic || "無自動啟動資料",
-            tripLogic: tripLogic || "無跳脫邏輯資料"
-        };
-    }
-    return null;
-}).filter(item => item !== null);
-
-                if (allData.length === 0) {
-                    document.getElementById('loading').innerHTML = "已連線至試算表，但裡面似乎沒有資料。";
-                } else {
-                    document.getElementById('loading').style.display = 'none';
-                    filterData();
-                }
-            } catch (error) {
-                document.getElementById('loading').innerText = "連線失敗，請檢查網路。";
-            }
+// 5. 載入主泵浦資料[cite: 1, 2]
+async function loadData() {
+    try {
+        const response = await fetch(csvUrl);
+        const text = await response.text();
+        if (text.includes("<!DOCTYPE html>")) {
+            document.getElementById('loading').innerHTML = "<b style='color:red;'>網址格式錯誤。</b>";
+            return;
         }
+        const rows = text.split(/\r?\n/);
+        allData = rows.slice(1).filter(row => row.trim() !== "").map(row => {
+            const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            if (cols.length >= 1) {
+                const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
+                const startLogic = cols.slice(1, 26).map(v => v.replace(/"/g, '').trim()).filter(v => v !== "").join('<br>');
+                const autoLogic = cols.slice(26, 52).map(v => v.replace(/"/g, '').trim()).filter(v => v !== "").join('<br>');
+                const tripLogic = cols.slice(52, 78).map(v => v.replace(/"/g, '').trim()).filter(v => v !== "").join('<br>');
+                return { name, combinedLogic: startLogic || "無資料", autoStart: autoLogic || "無資料", tripLogic: tripLogic || "無資料" };
+            }
+            return null;
+        }).filter(item => item !== null);
 
-        function filterData() {
+        document.getElementById('loading').style.display = 'none';
+        filterData();
+    } catch (error) {
+        document.getElementById('loading').innerText = "連線失敗。";
+    }
+}
+
+// 6. 搜尋與高亮邏輯[cite: 2]
+function filterData() {
     const input = document.getElementById('searchInput');
-    const query = input.value.trim().toLowerCase(); // 保留這行
-    const clearBtn = document.getElementById('clearButton');
+    const query = input.value.trim().toLowerCase();
     const container = document.getElementById('results');
-    
-    // 顯示或隱藏清除按鈕
-    clearBtn.style.display = query.length > 0 ? 'block' : 'none';
+    document.getElementById('clearButton').style.display = query.length > 0 ? 'block' : 'none';
     container.innerHTML = '';
 
-    if (allData.length === 0) return;
+    const highlight = (text, q) => {
+        if (!q || !text) return text;
+        const regex = new RegExp('(?![^<]*>)(' + q + ')', 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    };
 
-    // 搜尋過濾
-    const filtered = allData.filter(item => 
+    allData.filter(item => 
         item.name.toLowerCase().includes(query) || 
         item.combinedLogic.toLowerCase().includes(query) ||
         item.autoStart.toLowerCase().includes(query) ||
         item.tripLogic.toLowerCase().includes(query)
-    );
-
-    // 高亮處理函式
-const highlight = (text, q) => {
-    if (!q || !text) return text;
-    // 只高亮非標籤內的文字，避免破壞 <span class="term-link">
-    const regex = new RegExp(`(?![^<]*>)(${q})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
-};
-
-    filtered.forEach(item => {
-        // 1. 先處理術語連結 (將 LP Eco. Filled 等字轉為可點擊藍字)
+    ).forEach(item => {
         const logicWithLinks = applyTermLinks(item.combinedLogic);
         const autoWithLinks = applyTermLinks(item.autoStart);
         const tripWithLinks = applyTermLinks(item.tripLogic);
-
-        // 2. 判斷各個區塊是否包含關鍵字，決定是否自動打開 (open)
         const isLogicOpen = query && item.combinedLogic.toLowerCase().includes(query) ? 'open' : '';
         const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';
         const isTripOpen = query && item.tripLogic.toLowerCase().includes(query) ? 'open' : '';
 
         container.innerHTML += `
             <div class="card">
-                <h3 style="border-left: 5px solid #007aff; padding-left: 10px; color: #333; margin-bottom: 12px;">
-                    ${highlight(item.name, query)}
-                </h3>
-                
-                <!-- 第一個摺疊：啟動條件 -->
-                <details ${isLogicOpen} style="margin-top: 10px; margin-bottom: 8px;">
-                    <summary style="background-color: #e7f3ff; color: #0056b3; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
-                        啟動條件
-                    </summary>
-                    <div class="content-box" style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(logicWithLinks, query)}
-                    </div>
+                <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${highlight(item.name, query)}</h3>
+                <details ${isLogicOpen} style="margin-bottom: 8px;">
+                    <summary style="background-color: #e7f3ff; color: #0056b3;">啟動條件</summary>
+                    <div class="content-box">${highlight(logicWithLinks, query)}</div>
                 </details>
-
-                <!-- 第二個摺疊：自動啟動 -->
                 <details ${isAutoOpen} style="margin-bottom: 8px;">
-                    <summary style="background-color: #ebfbee; color: #2b8a3e; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
-                        自動啟動
-                    </summary>
-                    <div class="content-box" style="padding: 15px; background: #fff; border: 1px solid #ebfbee; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(autoWithLinks, query)}
-                    </div>
+                    <summary style="background-color: #ebfbee; color: #2b8a3e;">自動啟動</summary>
+                    <div class="content-box">${highlight(autoWithLinks, query)}</div>
                 </details>
-
-                <!-- 第三個摺疊：跳脫邏輯 -->
                 <details ${isTripOpen}>
-                    <summary style="background-color: #fff5f5; color: #c92a2a; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
-                        跳脫邏輯
-                    </summary>
-                    <div style="padding: 15px; background: #fff; border: 1px solid #fff5f5; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(tripWithLinks, query)}
-                    </div>
+                    <summary style="background-color: #fff5f5; color: #c92a2a;">跳脫邏輯</summary>
+                    <div class="content-box">${highlight(tripWithLinks, query)}</div>
                 </details>
-            </div>
-        `;
+            </div>`;
     });
 }
 
-        initApp();
-    </script>
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    filterData();
+}
+
+// 7. 啟動 App[cite: 1, 2]
+async function initApp() {
+    await loadTerms();
+    await loadData();
+}
+initApp();
+</script>
 </body>
 </html>

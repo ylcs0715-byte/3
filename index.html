@@ -73,11 +73,10 @@
 
         
 .term-link {
-    color: #007aff;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    cursor: pointer;
-    font-weight: 500;
+    color: #007aff !important;
+    text-decoration: underline !important;
+    font-weight: bold;
+    padding: 2px 0; /* 增加點擊範圍 */
 }
 
 .term-link:active {
@@ -126,10 +125,20 @@ async function loadTerms() {
 
 // --- 將文字中的術語轉換為可點擊連結 ---
 function applyTermLinks(text) {
+    if (!text) return "";
     let newText = text;
-    Object.keys(termMap).forEach(term => {
-        // 使用正則表達式尋找完全符合的術語
-        const regex = new RegExp(`(${term})`, 'g');
+    
+    // 取得所有術語，並依照長度排序（先比對長的，避免 "LP Eco" 先於 "LP Eco. Filled" 被取代）
+    const terms = Object.keys(termMap).sort((a, b) => b.length - a.length);
+
+    terms.forEach(term => {
+        if (term.trim() === "") return;
+        
+        // 轉義特殊符號（例如點號 . 在正則表達式中有特殊意義）
+        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escapedTerm})`, 'g');
+        
+        // 替換為帶有樣式的 span
         newText = newText.replace(regex, `<span class="term-link" onclick="showTermModal('$1')">$1</span>`);
     });
     return newText;
@@ -250,7 +259,6 @@ function clearSearch() {
         const logicWithLinks = applyTermLinks(item.combinedLogic);
         const autoWithLinks = applyTermLinks(item.autoStart);
         const tripWithLinks = applyTermLinks(item.tripLogic);
-
         // 2. 判斷是否自動打開
         const isLogicOpen = query && item.combinedLogic.toLowerCase().includes(query) ? 'open' : '';
         const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';

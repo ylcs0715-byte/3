@@ -159,10 +159,11 @@ function showTermModal(term) {
 
 // --- 修改初始化順序 ---
 async function initApp() {
+    document.getElementById('loading').innerText = "正在從雲端載入術語與資料...";
     await loadTerms(); // 優先載入術語表
     await loadData();  // 再載入泵浦資料
 }
-
+initApp();
 
         
         

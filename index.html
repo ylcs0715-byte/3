@@ -111,21 +111,20 @@ async function loadTerms() {
         const text = await response.text();
         const rows = text.split(/\r?\n/);
         
-        // 清空字典重新載入
         termMap = {}; 
-        
         rows.slice(1).forEach(row => {
+            if (!row.trim()) return;
+            // 使用正則拆分 CSV，處理包含引號的欄位
             const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length >= 2) {
-                // 去除引號與前後空格
-                const term = cols[0].replace(/"/g, '').trim();
-                const definition = cols[1].replace(/"/g, '').trim();
+                const term = cols[0].replace(/^"|"$/g, '').trim();
+                const definition = cols[1].replace(/^"|"$/g, '').trim();
                 if (term) termMap[term] = definition;
             }
         });
-        console.log("字典載入成功:", termMap);
+        console.log("術語字典載入成功:", termMap);[cite: 2]
     } catch (e) {
-        console.error("術語載入失敗:", e);
+        console.error("術語載入失敗:", e);[cite: 2]
     }
 }
 
@@ -134,20 +133,19 @@ function applyTermLinks(text) {
     if (!text || Object.keys(termMap).length === 0) return text;[cite: 2]
     let newText = text;
     
-    // 按長度排序，確保「LP Eco. Filled」優先於「LP」被匹配
     const terms = Object.keys(termMap).sort((a, b) => b.length - a.length);[cite: 2]
 
     terms.forEach(term => {
         const cleanTerm = term.trim();
         if (!cleanTerm) return;[cite: 2]
         
-        // 轉義正則表達式特殊字元[cite: 2]
         const escapedTerm = cleanTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedTerm, 'g');[cite: 2]
+        // 加入 'i' flag 進行不分大小寫比對
+        const regex = new RegExp(`(${escapedTerm})`, 'gi'); 
         
-        // 替換為藍色連結[cite: 2]
         newText = newText.replace(regex, (match) => {
-            return `<span class="term-link" onclick="event.stopPropagation(); showTermModal('${match}')">${match}</span>`;[cite: 2]
+            // 使用原始匹配到的字串 (match) 以保持畫面美觀[cite: 2]
+            return `<span class="term-link" onclick="event.stopPropagation(); showTermModal('${cleanTerm}')">${match}</span>`;[cite: 2]
         });
     });
     return newText;

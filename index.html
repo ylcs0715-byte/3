@@ -107,7 +107,7 @@ const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XB
 let termMap = {}; 
 let allData = [];
 
-// 2. 載入術語字典 (從第二分頁)
+// 2. 載入術語字典 (第二分頁)
 async function loadTerms() {
     try {
         const response = await fetch(termCsvUrl);
@@ -116,7 +116,6 @@ async function loadTerms() {
         termMap = {}; 
         rows.slice(1).forEach(row => {
             if (!row.trim()) return;
-            // 嚴謹拆分 CSV
             const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length >= 2) {
                 const term = cols[0].replace(/^"|"$/g, '').trim();
@@ -124,42 +123,46 @@ async function loadTerms() {
                 if (term) termMap[term] = definition;
             }
         });
-        console.log("字典載入成功:", termMap);[cite: 2]
+        console.log("字典載入成功:", termMap);
     } catch (e) {
         console.error("術語載入失敗:", e);
     }
 }
 
-// 3. 處理術語點擊連結 (修正相容性問題)
+// 3. 處理術語點擊連結 (修復當機問題的關鍵)
 function applyTermLinks(text) {
-    if (!text || Object.keys(termMap).length === 0) return text;[cite: 2]
-    let newText = text;
+    if (!text || Object.keys(termMap).length === 0) return text;
     
-    // 按長度排序，確保「LP Eco. Filled」優先匹配[cite: 2]
-    const terms = Object.keys(termMap).sort((a, b) => b.length - a.length); 
-
-    terms.forEach(term => {
-        const cleanTerm = term.trim();
-        if (!cleanTerm) return;
-        
-        // 轉義特殊符號並使用相容性高的 RegExp[cite: 2]
-        const escapedTerm = cleanTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp('(' + escapedTerm + ')', 'gi'); 
-        
-        newText = newText.replace(regex, function(match) {
-            return '<span class="term-link" onclick="event.stopPropagation(); showTermModal(\'' + cleanTerm + '\')">' + match + '</span>';
-        });
+    // 將所有術語按長度排序 (長的先處理)
+    const terms = Object.keys(termMap)
+                    .map(t => t.trim())
+                    .filter(t => t)
+                    .sort((a, b) => b.length - a.length);
+                    
+    if (terms.length === 0) return text;
+    
+    // 將所有術語打包成單一正則表達式，例如: (LP Eco\. Filled|LP|CWP)
+    // 這樣可以保證一次掃描過去，絕不會重複替換到 HTML 標籤內部
+    const escapedTerms = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const combinedRegex = new RegExp('(?![^<]*>)(' + escapedTerms.join('|') + ')', 'gi'); 
+    
+    // 執行一次性替換
+    return text.replace(combinedRegex, function(match) {
+        // 利用 this.innerText 抓取點擊當下的文字，避免引號衝突
+        return '<span class="term-link" onclick="event.stopPropagation(); showTermModal(this.innerText)">' + match + '</span>';
     });
-    return newText;
 }
 
-// 4. 顯示彈窗[cite: 2]
-function showTermModal(term) {
-    const definition = termMap[term] || "目前無相關解釋資料。";
-    alert(term + "：\n\n" + definition);
+// 4. 顯示彈窗
+function showTermModal(clickedText) {
+    // 不分大小寫反查字典
+    const lowerClick = clickedText.toLowerCase();
+    const actualKey = Object.keys(termMap).find(k => k.toLowerCase() === lowerClick);
+    const definition = termMap[actualKey] || "目前無相關解釋資料。";
+    alert(clickedText + "：\n\n" + definition);
 }
 
-// 5. 載入主泵浦資料[cite: 1, 2]
+// 5. 載入主泵浦資料
 async function loadData() {
     try {
         const response = await fetch(csvUrl);
@@ -181,6 +184,7 @@ async function loadData() {
             return null;
         }).filter(item => item !== null);
 
+        // 成功後隱藏載入文字
         document.getElementById('loading').style.display = 'none';
         filterData();
     } catch (error) {
@@ -188,7 +192,7 @@ async function loadData() {
     }
 }
 
-// 6. 搜尋與高亮邏輯[cite: 2]
+// 6. 搜尋與高亮邏輯
 function filterData() {
     const input = document.getElementById('searchInput');
     const query = input.value.trim().toLowerCase();
@@ -196,9 +200,11 @@ function filterData() {
     document.getElementById('clearButton').style.display = query.length > 0 ? 'block' : 'none';
     container.innerHTML = '';
 
+    // 高亮功能也加了保護，防止使用者輸入特殊符號導致當機
     const highlight = (text, q) => {
         if (!q || !text) return text;
-        const regex = new RegExp('(?![^<]*>)(' + q + ')', 'gi');
+        const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+        const regex = new RegExp('(?![^<]*>)(' + escapedQ + ')', 'gi');
         return text.replace(regex, '<mark>$1</mark>');
     };
 
@@ -208,9 +214,11 @@ function filterData() {
         item.autoStart.toLowerCase().includes(query) ||
         item.tripLogic.toLowerCase().includes(query)
     ).forEach(item => {
+        // 先套用術語連結，再套用高亮
         const logicWithLinks = applyTermLinks(item.combinedLogic);
         const autoWithLinks = applyTermLinks(item.autoStart);
         const tripWithLinks = applyTermLinks(item.tripLogic);
+        
         const isLogicOpen = query && item.combinedLogic.toLowerCase().includes(query) ? 'open' : '';
         const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';
         const isTripOpen = query && item.tripLogic.toLowerCase().includes(query) ? 'open' : '';
@@ -239,7 +247,7 @@ function clearSearch() {
     filterData();
 }
 
-// 7. 啟動 App[cite: 1, 2]
+// 7. 啟動 App
 async function initApp() {
     await loadTerms();
     await loadData();

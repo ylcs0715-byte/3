@@ -100,29 +100,31 @@
     <div id="results"></div>
 
     <script>
+// 確保這兩行在 <script> 最上方
+const termCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?gid=1982312478&single=true&output=csv"; 
+let termMap = {}; 
 
-// 請替換為你第二分頁發佈的 CSV 網址
-const termCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?gid=1982312478&single=true&output=csv";
-let termMap = {}; // 儲存術語對應表 { "術語": "解釋" }
-
-// --- 載入術語解釋 ---
 async function loadTerms() {
     try {
         const response = await fetch(termCsvUrl);
         const text = await response.text();
         const rows = text.split(/\r?\n/);
         
+        // 清空字典重新載入
+        termMap = {}; 
+        
         rows.slice(1).forEach(row => {
             const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length >= 2) {
+                // 去除引號與前後空格
                 const term = cols[0].replace(/"/g, '').trim();
                 const definition = cols[1].replace(/"/g, '').trim();
-                if(term) termMap[term] = definition;
+                if (term) termMap[term] = definition;
             }
         });
-        console.log("術語字典載入成功:", termMap); // 驗證是否有 LP Eco. Filled
+        console.log("字典載入成功:", termMap);
     } catch (e) {
-        console.error("術語載入失敗", e);
+        console.error("術語載入失敗:", e);
     }
 }
 

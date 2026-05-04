@@ -7,15 +7,16 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
 
-        .content-box { 
+.content-box { 
     padding: 15px; 
     background: #fff; 
-    border: 1px solid #ddd; /* 增加邊框 */
-    border-top: none;       /* 移除上方邊框 */
+    border: 1px solid #ddd; 
+    border-top: none; 
     border-radius: 0 0 8px 8px; 
     font-size: 15px; 
     line-height: 1.6; 
-    }
+    white-space: pre-wrap; /* 確保換行正常顯示 */
+}
         
             .search-container {
         position: sticky;
@@ -133,19 +134,21 @@ function applyTermLinks(text) {
     if (!text) return "";
     let newText = text;
     
-    // 檢查字典內容 (發布後可在 F12 控制台查看)
-    console.log("當前術語字典內容:", termMap);
-
+    // 取得所有術語並按長度排序（長到短），避免短詞優先替換
     const terms = Object.keys(termMap).sort((a, b) => b.length - a.length);
 
     terms.forEach(term => {
         if (!term.trim()) return;
-        // 轉義特殊符號並處理前後空格
-        const escapedTerm = term.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`(${escapedTerm})`, 'g');
         
-        // 替換為 span
-        newText = newText.replace(regex, `<span class="term-link" onclick="event.stopPropagation(); showTermModal('$1')">$1</span>`);
+        // 轉義術語中的特殊符號（如 .）
+        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        
+        // 關鍵：使用負向預查，確保不會替換到已經被包裝在 <span> 內的文字
+        const regex = new RegExp(`(?<!<[^>]*)${escapedTerm}(?![^<]*>)`, 'g');
+        
+        newText = newText.replace(regex, (match) => {
+            return `<span class="term-link" onclick="event.stopPropagation(); showTermModal('${match}')">${match}</span>`;
+        });
     });
     return newText;
 }

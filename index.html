@@ -71,7 +71,7 @@
         details[open] summary::before { content: "▼ "; transform: rotate(0deg); color: #ff9500; }
         .content-box { padding: 15px; background: #fff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6; }
 
-        //LP Eco. Filled可點擊
+        
 .term-link {
     color: #007aff;
     text-decoration: underline;
@@ -100,7 +100,7 @@
     <script>
 
 // 請替換為你第二分頁發佈的 CSV 網址
-const termCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?output=csv";
+const termCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?gid=1982312478&single=true&output=csv";
 let termMap = {}; // 儲存術語對應表 { "術語": "解釋" }
 
 // --- 載入術語解釋 ---
@@ -246,10 +246,12 @@ function clearSearch() {
     };
 
     filtered.forEach(item => {
+        // 1. 先處理術語連結 (這會產生 <span class="term-link"> 標籤)
         const logicWithLinks = applyTermLinks(item.combinedLogic);
         const autoWithLinks = applyTermLinks(item.autoStart);
         const tripWithLinks = applyTermLinks(item.tripLogic);
-        // 判斷各個區塊是否包含關鍵字，決定是否自動打開 (open)
+
+        // 2. 判斷是否自動打開
         const isLogicOpen = query && item.combinedLogic.toLowerCase().includes(query) ? 'open' : '';
         const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';
         const isTripOpen = query && item.tripLogic.toLowerCase().includes(query) ? 'open' : '';
@@ -266,7 +268,7 @@ function clearSearch() {
                         啟動條件
                     </summary>
                     <div style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(item.combinedLogic, query)}
+                        ${highlight(logicWithLinks, query)} <!-- 這裡改用 logicWithLinks -->
                     </div>
                 </details>
 
@@ -276,7 +278,7 @@ function clearSearch() {
                         自動啟動
                     </summary>
                     <div style="padding: 15px; background: #fff; border: 1px solid #ebfbee; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(item.autoStart, query)}
+                        ${highlight(autoWithLinks, query)} <!-- 這裡改用 autoWithLinks -->
                     </div>
                 </details>
 
@@ -286,7 +288,7 @@ function clearSearch() {
                         跳脫邏輯
                     </summary>
                     <div style="padding: 15px; background: #fff; border: 1px solid #fff5f5; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(item.tripLogic, query)}
+                        ${highlight(tripWithLinks, query)} <!-- 這裡改用 tripWithLinks -->
                     </div>
                 </details>
             </div>

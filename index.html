@@ -73,13 +73,13 @@
 
         
 .term-link {
-    color: #007aff !important; /* 強制使用藍色 */
+    color: #007aff !important;
     text-decoration: underline !important;
-    text-underline-offset: 3px;
     cursor: pointer !important;
     font-weight: bold;
-    display: inline-block; /* 略微增加點擊觸感 */
-    padding: 0 1px;
+    position: relative;
+    z-index: 102; /* 必須高於 search-box 的 100 */
+    pointer-events: auto !important;
 }
 
 .term-link:active {
@@ -130,17 +130,20 @@ async function loadTerms() {
 function applyTermLinks(text) {
     if (!text) return "";
     let newText = text;
+    
+    // 檢查字典內容 (發布後可在 F12 控制台查看)
+    console.log("當前術語字典內容:", termMap);
+
     const terms = Object.keys(termMap).sort((a, b) => b.length - a.length);
 
     terms.forEach(term => {
-        if (term.trim() === "") return;
-        
-        // 轉義特殊符號（例如點號 . 在正則表達式中有特殊意義）
-        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (!term.trim()) return;
+        // 轉義特殊符號並處理前後空格
+        const escapedTerm = term.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${escapedTerm})`, 'g');
         
-        // 替換為帶有樣式的 span
-        newText = newText.replace(regex, `<span class="term-link" onclick="showTermModal('$1')">$1</span>`);
+        // 替換為 span
+        newText = newText.replace(regex, `<span class="term-link" onclick="event.stopPropagation(); showTermModal('$1')">$1</span>`);
     });
     return newText;
 }
@@ -256,11 +259,12 @@ function clearSearch() {
     };
 
     filtered.forEach(item => {
-        // 1. 先處理術語連結 (這會產生 <span class="term-link"> 標籤)
+        // 1. 先處理術語連結 (將 LP Eco. Filled 等字轉為可點擊藍字)
         const logicWithLinks = applyTermLinks(item.combinedLogic);
         const autoWithLinks = applyTermLinks(item.autoStart);
         const tripWithLinks = applyTermLinks(item.tripLogic);
-        // 2. 判斷是否自動打開
+
+        // 2. 判斷各個區塊是否包含關鍵字，決定是否自動打開 (open)
         const isLogicOpen = query && item.combinedLogic.toLowerCase().includes(query) ? 'open' : '';
         const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';
         const isTripOpen = query && item.tripLogic.toLowerCase().includes(query) ? 'open' : '';
@@ -276,8 +280,8 @@ function clearSearch() {
                     <summary style="background-color: #e7f3ff; color: #0056b3; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
                         啟動條件
                     </summary>
-                    <div style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(logicWithLinks, query)} <!-- 這裡改用 logicWithLinks -->
+                    <div class="content-box" style="padding: 15px; background: #fff; border: 1px solid #e7f3ff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
+                        ${highlight(logicWithLinks, query)}
                     </div>
                 </details>
 
@@ -286,8 +290,8 @@ function clearSearch() {
                     <summary style="background-color: #ebfbee; color: #2b8a3e; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; list-style: none;">
                         自動啟動
                     </summary>
-                    <div style="padding: 15px; background: #fff; border: 1px solid #ebfbee; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(autoWithLinks, query)} <!-- 這裡改用 autoWithLinks -->
+                    <div class="content-box" style="padding: 15px; background: #fff; border: 1px solid #ebfbee; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
+                        ${highlight(autoWithLinks, query)}
                     </div>
                 </details>
 
@@ -297,7 +301,7 @@ function clearSearch() {
                         跳脫邏輯
                     </summary>
                     <div style="padding: 15px; background: #fff; border: 1px solid #fff5f5; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6;">
-                        ${highlight(tripWithLinks, query)} <!-- 這裡改用 tripWithLinks -->
+                        ${highlight(tripWithLinks, query)}
                     </div>
                 </details>
             </div>

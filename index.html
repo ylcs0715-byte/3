@@ -118,13 +118,11 @@ async function loadTerms() {
             if (!row.trim()) return;
             const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length >= 2) {
-                // 移除可能的隱藏字符與引號
+                // 移除隱藏字元與引號
                 const term = cols[0].replace(/^"|"$/g, '').replace(/^\uFEFF/, '').trim();
                 const definition = cols[1].replace(/^"|"$/g, '').trim();
                 if (term) {
-                    // 統一轉大寫存入字典，避免大小寫不一致導致找不到
                     termMap[term.toUpperCase()] = definition;
-                    // 同時保留原始名稱，方便產生正則表達式
                     termMap[term.toUpperCase() + "_ORIGINAL"] = term; 
                 }
             }
@@ -135,11 +133,11 @@ async function loadTerms() {
     }
 }
 
-// 3. 處理術語點擊連結 (最高相容性與容錯率)
+// 3. 處理術語點擊連結 (終極無敵版：HTML 安全切割 + 模糊空白比對)
 function applyTermLinks(text) {
     if (!text || Object.keys(termMap).length === 0) return text;
     
-    // 取出所有原始術語，並依照長度排序 (長的先比對)
+    // 取出術語並按長度排序
     const terms = Object.keys(termMap)
         .filter(k => !k.includes("_ORIGINAL"))
         .map(k => termMap[k + "_ORIGINAL"])
@@ -147,24 +145,41 @@ function applyTermLinks(text) {
 
     if (terms.length === 0) return text;
     
-    // 將術語打包為單一正則表達式，例如: (LP Eco\. Filled|CWP)
-    const escapedTerms = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const combinedRegex = new RegExp('(' + escapedTerms.join('|') + ')', 'gi');
-    
-    // 執行替換
-    return text.replace(combinedRegex, function(match) {
-        // 替換單引號防止 HTML 屬性錯誤
-        const safeMatch = match.replace(/'/g, "\\'");
-        return '<span class="term-link" onclick="event.stopPropagation(); showTermModal(\'' + safeMatch + '\')">' + match + '</span>';
+    let newText = text;
+
+    terms.forEach(term => {
+        if (!term.trim()) return;
+
+        // 轉義特殊符號
+        let escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        
+        // 【關鍵魔法】將術語中的空白，轉換為正則的 \s+ 
+        // 這樣不管文字裡是 "LP Eco. Filled" 還是 "LP Eco.  Filled" 都能配對成功！
+        escapedTerm = escapedTerm.replace(/\\ /g, '\\s+');
+        
+        const regex = new RegExp(`(${escapedTerm})`, 'gi');
+
+        // 安全切割 HTML，確保只替換純文字，絕不破壞既有標籤
+        const parts = newText.split(/(<[^>]+>)/g);
+        for (let i = 0; i < parts.length; i++) {
+            if (i % 2 === 0) { // 偶數是純文字
+                parts[i] = parts[i].replace(regex, function(match) {
+                    const safeTerm = term.replace(/'/g, "\\'"); // 傳遞字典原始 key
+                    return `<span class="term-link" onclick="event.stopPropagation(); showTermModal('${safeTerm}')">${match}</span>`;
+                });
+            }
+        }
+        newText = parts.join('');
     });
+
+    return newText;
 }
 
 // 4. 顯示彈窗
-function showTermModal(clickedText) {
-    // 將點擊的文字轉大寫，去字典裡面找
-    const upperClick = clickedText.toUpperCase().trim();
-    const definition = termMap[upperClick] || "目前無相關解釋資料。";
-    alert(clickedText + "：\n\n" + definition);
+function showTermModal(termKey) {
+    const upperKey = termKey.toUpperCase().trim();
+    const definition = termMap[upperKey] || "目前無相關解釋資料。";
+    alert(termKey + "：\n\n" + definition);
 }
 
 // 5. 載入主泵浦資料
@@ -204,13 +219,12 @@ function filterData() {
     document.getElementById('clearButton').style.display = query.length > 0 ? 'block' : 'none';
     container.innerHTML = '';
 
-    // 【最安全的高亮做法】切割 HTML 標籤，只替換純文字部分，絕對不會破壞 span 標籤
+    // 高亮功能同樣採用 HTML 安全切割法
     const highlight = (text, q) => {
         if (!q || !text) return text;
         const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp('(' + escapedQ + ')', 'gi');
+        const regex = new RegExp(`(${escapedQ})`, 'gi');
         
-        // 用 HTML 標籤做分割，偶數是純文字，奇數是 HTML 標籤
         const parts = text.split(/(<[^>]+>)/g);
         for (let i = 0; i < parts.length; i++) {
             if (i % 2 === 0) {
@@ -226,6 +240,7 @@ function filterData() {
         item.autoStart.toLowerCase().includes(query) ||
         item.tripLogic.toLowerCase().includes(query)
     ).forEach(item => {
+        // 先建立術語連結
         const logicWithLinks = applyTermLinks(item.combinedLogic);
         const autoWithLinks = applyTermLinks(item.autoStart);
         const tripWithLinks = applyTermLinks(item.tripLogic);
@@ -234,6 +249,7 @@ function filterData() {
         const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';
         const isTripOpen = query && item.tripLogic.toLowerCase().includes(query) ? 'open' : '';
 
+        // 再把連結後的文字送去高亮
         container.innerHTML += `
             <div class="card">
                 <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${highlight(item.name, query)}</h3>

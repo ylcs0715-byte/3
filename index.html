@@ -107,7 +107,7 @@ const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XB
 let termMap = {}; 
 let allData = [];
 
-// 2. 載入術語字典 (第二分頁)
+// 2. 載入術語字典
 async function loadTerms() {
     try {
         const response = await fetch(termCsvUrl);
@@ -118,9 +118,15 @@ async function loadTerms() {
             if (!row.trim()) return;
             const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length >= 2) {
-                const term = cols[0].replace(/^"|"$/g, '').trim();
+                // 移除可能的隱藏字符與引號
+                const term = cols[0].replace(/^"|"$/g, '').replace(/^\uFEFF/, '').trim();
                 const definition = cols[1].replace(/^"|"$/g, '').trim();
-                if (term) termMap[term] = definition;
+                if (term) {
+                    // 統一轉大寫存入字典，避免大小寫不一致導致找不到
+                    termMap[term.toUpperCase()] = definition;
+                    // 同時保留原始名稱，方便產生正則表達式
+                    termMap[term.toUpperCase() + "_ORIGINAL"] = term; 
+                }
             }
         });
         console.log("字典載入成功:", termMap);
@@ -129,36 +135,35 @@ async function loadTerms() {
     }
 }
 
-// 3. 處理術語點擊連結 (修復當機問題的關鍵)
+// 3. 處理術語點擊連結 (最高相容性與容錯率)
 function applyTermLinks(text) {
     if (!text || Object.keys(termMap).length === 0) return text;
     
-    // 將所有術語按長度排序 (長的先處理)
+    // 取出所有原始術語，並依照長度排序 (長的先比對)
     const terms = Object.keys(termMap)
-                    .map(t => t.trim())
-                    .filter(t => t)
-                    .sort((a, b) => b.length - a.length);
-                    
+        .filter(k => !k.includes("_ORIGINAL"))
+        .map(k => termMap[k + "_ORIGINAL"])
+        .sort((a, b) => b.length - a.length);
+
     if (terms.length === 0) return text;
     
-    // 將所有術語打包成單一正則表達式，例如: (LP Eco\. Filled|LP|CWP)
-    // 這樣可以保證一次掃描過去，絕不會重複替換到 HTML 標籤內部
+    // 將術語打包為單一正則表達式，例如: (LP Eco\. Filled|CWP)
     const escapedTerms = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const combinedRegex = new RegExp('(?![^<]*>)(' + escapedTerms.join('|') + ')', 'gi'); 
+    const combinedRegex = new RegExp('(' + escapedTerms.join('|') + ')', 'gi');
     
-    // 執行一次性替換
+    // 執行替換
     return text.replace(combinedRegex, function(match) {
-        // 利用 this.innerText 抓取點擊當下的文字，避免引號衝突
-        return '<span class="term-link" onclick="event.stopPropagation(); showTermModal(this.innerText)">' + match + '</span>';
+        // 替換單引號防止 HTML 屬性錯誤
+        const safeMatch = match.replace(/'/g, "\\'");
+        return '<span class="term-link" onclick="event.stopPropagation(); showTermModal(\'' + safeMatch + '\')">' + match + '</span>';
     });
 }
 
 // 4. 顯示彈窗
 function showTermModal(clickedText) {
-    // 不分大小寫反查字典
-    const lowerClick = clickedText.toLowerCase();
-    const actualKey = Object.keys(termMap).find(k => k.toLowerCase() === lowerClick);
-    const definition = termMap[actualKey] || "目前無相關解釋資料。";
+    // 將點擊的文字轉大寫，去字典裡面找
+    const upperClick = clickedText.toUpperCase().trim();
+    const definition = termMap[upperClick] || "目前無相關解釋資料。";
     alert(clickedText + "：\n\n" + definition);
 }
 
@@ -184,7 +189,6 @@ async function loadData() {
             return null;
         }).filter(item => item !== null);
 
-        // 成功後隱藏載入文字
         document.getElementById('loading').style.display = 'none';
         filterData();
     } catch (error) {
@@ -200,12 +204,20 @@ function filterData() {
     document.getElementById('clearButton').style.display = query.length > 0 ? 'block' : 'none';
     container.innerHTML = '';
 
-    // 高亮功能也加了保護，防止使用者輸入特殊符號導致當機
+    // 【最安全的高亮做法】切割 HTML 標籤，只替換純文字部分，絕對不會破壞 span 標籤
     const highlight = (text, q) => {
         if (!q || !text) return text;
-        const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
-        const regex = new RegExp('(?![^<]*>)(' + escapedQ + ')', 'gi');
-        return text.replace(regex, '<mark>$1</mark>');
+        const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp('(' + escapedQ + ')', 'gi');
+        
+        // 用 HTML 標籤做分割，偶數是純文字，奇數是 HTML 標籤
+        const parts = text.split(/(<[^>]+>)/g);
+        for (let i = 0; i < parts.length; i++) {
+            if (i % 2 === 0) {
+                parts[i] = parts[i].replace(regex, '<mark>$1</mark>');
+            }
+        }
+        return parts.join('');
     };
 
     allData.filter(item => 
@@ -214,7 +226,6 @@ function filterData() {
         item.autoStart.toLowerCase().includes(query) ||
         item.tripLogic.toLowerCase().includes(query)
     ).forEach(item => {
-        // 先套用術語連結，再套用高亮
         const logicWithLinks = applyTermLinks(item.combinedLogic);
         const autoWithLinks = applyTermLinks(item.autoStart);
         const tripWithLinks = applyTermLinks(item.tripLogic);
@@ -249,6 +260,7 @@ function clearSearch() {
 
 // 7. 啟動 App
 async function initApp() {
+    document.getElementById('loading').innerText = "正在從雲端載入術語與資料...";
     await loadTerms();
     await loadData();
 }

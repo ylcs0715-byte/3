@@ -131,21 +131,22 @@ async function loadTerms() {
 
 // --- 將文字中的術語轉換為可點擊連結 ---
 function applyTermLinks(text) {
-    if (!text) return "";
+    if (!text || Object.keys(termMap).length === 0) return text;
     let newText = text;
     
-    // 取得所有術語並按長度排序（長到短），避免短詞優先替換
+    // 按長度排序，避免短術語破壞長術語
     const terms = Object.keys(termMap).sort((a, b) => b.length - a.length);
 
     terms.forEach(term => {
         if (!term.trim()) return;
         
-        // 轉義術語中的特殊符號（如 .）
+        // 轉義點號等特殊字元
         const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         
-        // 關鍵：使用負向預查，確保不會替換到已經被包裝在 <span> 內的文字
-        const regex = new RegExp(`(?<!<[^>]*)${escapedTerm}(?![^<]*>)`, 'g');
+        // 使用簡單的全局替換正則
+        const regex = new RegExp(escapedTerm, 'g');
         
+        // 替換為 span
         newText = newText.replace(regex, (match) => {
             return `<span class="term-link" onclick="event.stopPropagation(); showTermModal('${match}')">${match}</span>`;
         });
@@ -258,11 +259,13 @@ function clearSearch() {
     );
 
     // 高亮處理函式
-    const highlight = (text, q) => {
-        if (!q) return text;
-        const regex = new RegExp(`(${q})`, 'gi');
-        return text.replace(regex, '<mark>$1</mark>');
-    };
+const highlight = (text, q) => {
+    if (!q) return text;
+    
+    // 這段正則會只針對「非 HTML 標籤內」的文字進行高亮
+    const regex = new RegExp(`(?![^<]*>)(${q})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+};
 
     filtered.forEach(item => {
         // 1. 先處理術語連結 (將 LP Eco. Filled 等字轉為可點擊藍字)

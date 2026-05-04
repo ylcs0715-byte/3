@@ -73,14 +73,17 @@
 
         
 .term-link {
-    color: #007aff !important;
+    color: #007aff !important; /* 強制使用藍色 */
     text-decoration: underline !important;
+    text-underline-offset: 3px;
+    cursor: pointer !important;
     font-weight: bold;
-    padding: 2px 0; /* 增加點擊範圍 */
+    display: inline-block; /* 略微增加點擊觸感 */
+    padding: 0 1px;
 }
 
 .term-link:active {
-    background-color: rgba(0, 122, 255, 0.1);
+    background-color: rgba(0, 122, 255, 0.2);
     border-radius: 4px;
 }
 
@@ -109,7 +112,6 @@ async function loadTerms() {
         const text = await response.text();
         const rows = text.split(/\r?\n/);
         
-        // 讀取第二分頁，假設 A 欄是術語名稱，B 欄是解釋內容
         rows.slice(1).forEach(row => {
             const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             if (cols.length >= 2) {
@@ -118,6 +120,7 @@ async function loadTerms() {
                 if(term) termMap[term] = definition;
             }
         });
+        console.log("術語字典載入成功:", termMap); // 驗證是否有 LP Eco. Filled
     } catch (e) {
         console.error("術語載入失敗", e);
     }
@@ -127,8 +130,6 @@ async function loadTerms() {
 function applyTermLinks(text) {
     if (!text) return "";
     let newText = text;
-    
-    // 取得所有術語，並依照長度排序（先比對長的，避免 "LP Eco" 先於 "LP Eco. Filled" 被取代）
     const terms = Object.keys(termMap).sort((a, b) => b.length - a.length);
 
     terms.forEach(term => {

@@ -101,14 +101,29 @@
     <div id="results"></div>
 
 <script>
-// 1. 設定網址與全域變數
+// ==========================================
+// 🌟 全域變數設定
+// ==========================================
 const termCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?gid=1982312478&single=true&output=csv"; 
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XBrkk3wp69vg1Be_iXCo-EON7LxRhYQjGOGGE9jEpo2yeLGDSPC5Xq-mfKYKpUS3s/pub?output=csv"; 
+
 let termMap = {}; 
 let allData = [];
+let sectionsConfig = []; // 🤖 自動產生的摺疊控制台
+
+// 🎨 摺疊區塊的美化色票 (程式會自動依序套用)
+const colorPalette = [
+    { bg: "#e7f3ff", textCol: "#0056b3" }, // 藍色 (第1個)
+    { bg: "#ebfbee", textCol: "#2b8a3e" }, // 綠色 (第2個)
+    { bg: "#fff5f5", textCol: "#c92a2a" }, // 紅色 (第3個)
+    { bg: "#fff4e6", textCol: "#d9480f" }, // 橘色 (第4個)
+    { bg: "#f3f0ff", textCol: "#6741d9" }, // 紫色 (第5個)
+    { bg: "#e3fafc", textCol: "#0b7285" }, // 青色 (第6個)
+    { bg: "#f8f9fa", textCol: "#495057" }  // 灰色 (第7個之後循環)
+];
 
 // ==========================================
-// 【新增】專業 CSV 解析器 (專治 Alt+Enter 換行與逗號)
+// 專業 CSV 解析器
 // ==========================================
 function parseCSV(csvText) {
     const rows = [];
@@ -122,18 +137,18 @@ function parseCSV(csvText) {
 
         if (char === '"') {
             if (insideQuotes && nextChar === '"') {
-                currentCell += '"'; // 處理雙引號跳脫
+                currentCell += '"'; 
                 i++; 
             } else {
-                insideQuotes = !insideQuotes; // 切換引號狀態
+                insideQuotes = !insideQuotes; 
             }
         } else if (char === ',' && !insideQuotes) {
-            currentRow.push(currentCell); // 欄位結束
+            currentRow.push(currentCell); 
             currentCell = '';
         } else if ((char === '\n' || char === '\r') && !insideQuotes) {
-            if (char === '\r' && nextChar === '\n') i++; // 略過 \r\n
+            if (char === '\r' && nextChar === '\n') i++; 
             currentRow.push(currentCell);
-            rows.push(currentRow); // 該列結束
+            rows.push(currentRow); 
             currentRow = [];
             currentCell = '';
         } else {
@@ -144,19 +159,15 @@ function parseCSV(csvText) {
     if (currentRow.length > 0 || currentCell !== '') rows.push(currentRow);
     return rows;
 }
-// ==========================================
 
-// 2. 載入術語字典
+// 載入術語字典
 async function loadTerms() {
     try {
         const response = await fetch(termCsvUrl);
         const text = await response.text();
-        
-        // 使用新的解析器
         const rows = parseCSV(text);
         
         termMap = {}; 
-        // 跳過第一行標題，從 index 1 開始
         rows.slice(1).forEach(cols => {
             if (cols.length >= 2) {
                 const term = cols[0].replace(/^\uFEFF/, '').trim();
@@ -167,13 +178,12 @@ async function loadTerms() {
                 }
             }
         });
-        console.log("字典載入成功:", termMap);
     } catch (e) {
         console.error("術語載入失敗:", e);
     }
 }
 
-// 3. 處理術語點擊連結
+// 處理術語點擊連結
 function applyTermLinks(text) {
     if (!text || Object.keys(termMap).length === 0) return text;
     
@@ -203,18 +213,18 @@ function applyTermLinks(text) {
         }
         newText = parts.join('');
     });
-
     return newText;
 }
 
-// 4. 顯示彈窗
 function showTermModal(termKey) {
     const upperKey = termKey.toUpperCase().trim();
     const definition = termMap[upperKey] || "目前無相關解釋資料。";
     alert(termKey + "：\n\n" + definition);
 }
 
-// 5. 載入主泵浦資料
+// ==========================================
+// 🚀 核心：載入主資料與全自動摺疊生成
+// ==========================================
 async function loadData() {
     try {
         const response = await fetch(csvUrl);
@@ -224,30 +234,71 @@ async function loadData() {
             return;
         }
         
-        // 主資料也改用新的解析器，未來你主資料換行也不怕壞掉！
         const rows = parseCSV(text);
+        sectionsConfig = [];
         
-        allData = rows.slice(1).filter(cols => cols.length > 0 && cols[0].trim() !== "").map(cols => {
-            const name = cols[0] ? cols[0].trim() : "未命名";
-            
-            // 將陣列內容合併，並把儲存格內的換行(\n)轉成網頁換行(<br>)
-            const formatLogic = (arr) => arr.map(v => v.trim().replace(/\n/g, '<br>')).filter(v => v !== "").join('<br>');
-            
-            const startLogic = formatLogic(cols.slice(1, 26));
-            const autoLogic = formatLogic(cols.slice(26, 52));
-            const tripLogic = formatLogic(cols.slice(52, 78));
-            
-            return { name, combinedLogic: startLogic || "無資料", autoStart: autoLogic || "無資料", tripLogic: tripLogic || "無資料" };
-        });
+        // 🤖 步驟 1：掃描 A100 ~ A150 (陣列索引 99~149)，自動產生摺疊設定
+        let sectionIndex = 0;
+        for (let i = 99; i < Math.min(150, rows.length); i++) {
+            if (rows[i] && rows[i][0] && rows[i][0].trim() !== "") {
+                const title = rows[i][0].trim();
+                
+                // 計算對應的欄位區間 (每次 26 欄遞增)
+                // 第一個區間是 B~Z (索引 1~26)，之後是 26~52, 52~78, 78~104...
+                const startCol = sectionIndex === 0 ? 1 : sectionIndex * 26;
+                const endCol = (sectionIndex + 1) * 26;
+                const color = colorPalette[sectionIndex % colorPalette.length];
+                
+                sectionsConfig.push({
+                    id: "logic" + sectionIndex,
+                    title: title,
+                    startCol: startCol,
+                    endCol: endCol,
+                    bg: color.bg,
+                    textCol: color.textCol
+                });
+                sectionIndex++;
+            }
+        }
+
+        // 防呆機制：如果 A100 都沒寫東西，就給預設的三個摺疊
+        if (sectionsConfig.length === 0) {
+            sectionsConfig = [
+                { id: "logic0", title: "啟動條件", startCol: 1, endCol: 26, bg: "#e7f3ff", textCol: "#0056b3" },
+                { id: "logic1", title: "自動啟動", startCol: 26, endCol: 52, bg: "#ebfbee", textCol: "#2b8a3e" },
+                { id: "logic2", title: "跳脫邏輯", startCol: 52, endCol: 78, bg: "#fff5f5", textCol: "#c92a2a" }
+            ];
+        }
+
+        // 🤖 步驟 2：掃描 A2 ~ A95 (陣列索引 1~94)，抓取泵浦資料
+        allData = [];
+        for (let i = 1; i < Math.min(95, rows.length); i++) {
+            if (rows[i] && rows[i][0] && rows[i][0].trim() !== "") {
+                const cols = rows[i];
+                const name = cols[0].trim();
+                const formatLogic = (arr) => arr.map(v => v.trim().replace(/\n/g, '<br>')).filter(v => v !== "").join('<br>');
+                
+                let itemData = { name: name };
+                
+                // 依照剛剛產生的設定，自動去抓對應的欄位資料
+                sectionsConfig.forEach(sec => {
+                    const extracted = formatLogic(cols.slice(sec.startCol, sec.endCol));
+                    itemData[sec.id] = extracted || "無資料";
+                });
+                
+                allData.push(itemData);
+            }
+        }
 
         document.getElementById('loading').style.display = 'none';
         filterData();
     } catch (error) {
+        console.error(error);
         document.getElementById('loading').innerText = "連線失敗。";
     }
 }
 
-// 6. 搜尋與高亮邏輯
+// 搜尋與高亮繪製邏輯
 function filterData() {
     const input = document.getElementById('searchInput');
     const query = input.value.trim().toLowerCase();
@@ -269,36 +320,30 @@ function filterData() {
         return parts.join('');
     };
 
-    allData.filter(item => 
-        item.name.toLowerCase().includes(query) || 
-        item.combinedLogic.toLowerCase().includes(query) ||
-        item.autoStart.toLowerCase().includes(query) ||
-        item.tripLogic.toLowerCase().includes(query)
-    ).forEach(item => {
-        const logicWithLinks = applyTermLinks(item.combinedLogic);
-        const autoWithLinks = applyTermLinks(item.autoStart);
-        const tripWithLinks = applyTermLinks(item.tripLogic);
-        
-        const isLogicOpen = query && item.combinedLogic.toLowerCase().includes(query) ? 'open' : '';
-        const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';
-        const isTripOpen = query && item.tripLogic.toLowerCase().includes(query) ? 'open' : '';
-
-        container.innerHTML += `
+    allData.filter(item => {
+        if (item.name.toLowerCase().includes(query)) return true;
+        // 自動搜尋所有動態產生的摺疊內容
+        return sectionsConfig.some(sec => item[sec.id] && item[sec.id].toLowerCase().includes(query));
+    }).forEach(item => {
+        let cardsHtml = `
             <div class="card">
-                <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${highlight(item.name, query)}</h3>
-                <details ${isLogicOpen} style="margin-bottom: 8px;">
-                    <summary style="background-color: #e7f3ff; color: #0056b3;">啟動條件</summary>
-                    <div class="content-box">${highlight(logicWithLinks, query)}</div>
-                </details>
-                <details ${isAutoOpen} style="margin-bottom: 8px;">
-                    <summary style="background-color: #ebfbee; color: #2b8a3e;">自動啟動</summary>
-                    <div class="content-box">${highlight(autoWithLinks, query)}</div>
-                </details>
-                <details ${isTripOpen}>
-                    <summary style="background-color: #fff5f5; color: #c92a2a;">跳脫邏輯</summary>
-                    <div class="content-box">${highlight(tripWithLinks, query)}</div>
-                </details>
-            </div>`;
+                <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${highlight(item.name, query)}</h3>`;
+        
+        // 🤖 自動把掃描到的摺疊區塊畫出來，並套用預設色票
+        sectionsConfig.forEach((sec, index) => {
+            const contentWithLinks = applyTermLinks(item[sec.id]);
+            const isOpen = query && item[sec.id].toLowerCase().includes(query) ? 'open' : '';
+            const marginStyle = index === sectionsConfig.length - 1 ? '' : 'style="margin-bottom: 8px;"';
+
+            cardsHtml += `
+                <details ${isOpen} ${marginStyle}>
+                    <summary style="background-color: ${sec.bg}; color: ${sec.textCol};">${sec.title}</summary>
+                    <div class="content-box">${highlight(contentWithLinks, query)}</div>
+                </details>`;
+        });
+
+        cardsHtml += `</div>`;
+        container.innerHTML += cardsHtml;
     });
 }
 
@@ -307,7 +352,6 @@ function clearSearch() {
     filterData();
 }
 
-// 7. 啟動 App
 async function initApp() {
     document.getElementById('loading').innerText = "正在從雲端載入術語與資料...";
     await loadTerms();

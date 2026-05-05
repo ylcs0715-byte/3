@@ -88,7 +88,27 @@
     border-radius: 4px;
 }
 
-        
+/* 回到最上方按鈕設計 */
+    #backToTop {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        display: none; /* 預設先隱藏 */
+        width: 45px;
+        height: 45px;
+        background-color: #007aff;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        font-size: 20px;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        z-index: 1000;
+        transition: background-color 0.3s;
+    }
+    #backToTop:hover {
+        background-color: #0056b3;
+    }        
     </style>
 </head>
 <body>
@@ -99,6 +119,8 @@
 </div>
     <div id="loading" class="loading">正在從雲端載入最新資料...</div>
     <div id="results"></div>
+    <!-- 回到最上方按鈕 -->
+    <button id="backToTop" onclick="scrollToTop()" title="回到最上方">▲</button>
 
 <script>
 // ==========================================
@@ -358,6 +380,26 @@ async function initApp() {
     await loadData();
 }
 initApp();
+// ==========================================
+// 回到最上方按鈕邏輯
+// ==========================================
+window.onscroll = function() {
+    const btn = document.getElementById("backToTop");
+    // 當畫面往下滾動超過 300px 時，顯示按鈕
+    if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+        btn.style.display = "block";
+    } else {
+        btn.style.display = "none";
+    }
+};
+
+function scrollToTop() {
+    // 讓畫面「平滑」地捲動回頂部
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}    
 </script>
 </body>
 </html>

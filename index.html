@@ -4,65 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>所有泵條件查詢</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
-
-.content-box { 
-    padding: 15px; 
-    background: #fff; 
-    border: 1px solid #ddd; 
-    border-top: none; 
-    border-radius: 0 0 8px 8px; 
-    font-size: 15px; 
-    line-height: 1.6; 
-    white-space: pre-wrap; /* 確保換行正常顯示 */
-}
-        
-            .search-container {
-        position: sticky;
-        top: 10px;
-        z-index: 100;
-        margin-bottom: 15px;
-        }
-
-    /* 覆蓋原本 search-box 的 margin，因為外層已有 margin */
-    .search-box {
-        width: 100%;
-        padding: 15px 40px 15px 15px; /* 右邊留空間給 X */
-        border-radius: 10px;
-        border: 1px solid #ddd;
-        font-size: 16px;
-        box-sizing: border-box;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-    #clearButton {
-    position: absolute;
-    right: 15px;
-    top: 35%;
-    transform: translateY(-50%);
-    font-size: 20px;
-    color: #ccc;
-    cursor: pointer;
-    display: none; /* 初始隱藏，有字才會變 block */
-    z-index: 101;  /* 必須大於 search-box 的 z-index */
-    background: white; /* 增加背景避免被後方文字干擾 */
-    padding: 5px;
-}
-
-    #clearButton:hover {
-        color: #888;
-    }
-        
-            mark { 
-        background-color: yellow;
-        color: black;
-        padding: 0 2px;
-        border-radius: 2px;
-        }
-        
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
-        .search-box { width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; position: sticky; top: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 100; }
+        
+        .search-container {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            margin-bottom: 15px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px 40px 15px 15px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        #clearButton {
+            position: absolute;
+            right: 15px;
+            top: 35%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #ccc;
+            cursor: pointer;
+            display: none;
+            z-index: 101;
+            background: white;
+            padding: 5px;
+        }
+
+        #clearButton:hover { color: #888; }
+        mark { background-color: yellow; color: black; padding: 0 2px; border-radius: 2px; }
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px; }
         .card h3 { margin: 0 0 8px 0; color: #007aff; }
         .loading { text-align: center; color: #888; padding: 20px; }
@@ -70,56 +47,51 @@
         details summary { outline: none; list-style: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         details summary::before { content: "▶ "; font-size: 12px; transition: 0.2s; display: inline-block; width: 20px; }
         details[open] summary::before { content: "▼ "; transform: rotate(0deg); color: #ff9500; }
-        .content-box { padding: 15px; background: #fff; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6; }
+        .content-box { padding: 15px; background: #fff; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
 
-        
-.term-link {
-    color: #007aff !important;
-    text-decoration: underline !important;
-    cursor: pointer !important;
-    font-weight: bold;
-    position: relative;
-    z-index: 102; /* 必須高於 search-box 的 100 */
-    pointer-events: auto !important;
-}
+        .term-link {
+            color: #007aff !important;
+            text-decoration: underline !important;
+            cursor: pointer !important;
+            font-weight: bold;
+            position: relative;
+            z-index: 102;
+            pointer-events: auto !important;
+        }
+        .term-link:active { background-color: rgba(0, 122, 255, 0.2); border-radius: 4px; }
 
-.term-link:active {
-    background-color: rgba(0, 122, 255, 0.2);
-    border-radius: 4px;
-}
-
-/* 回到最上方按鈕設計 */
-    #backToTop {
-        position: fixed;
-        bottom: 25px;
-        right: 25px;
-        display: none; /* 預設先隱藏 */
-        width: 45px;
-        height: 45px;
-        background-color: #007aff;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        font-size: 20px;
-        cursor: pointer;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        z-index: 1000;
-        transition: background-color 0.3s;
-    }
-    #backToTop:hover {
-        background-color: #0056b3;
-    }        
+        /* 🚀 回到最上方按鈕設計 */
+        #backToTop {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            display: none; /* 預設隱藏，往下滾動才會出現 */
+            width: 45px;
+            height: 45px;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            transition: background-color 0.3s;
+        }
+        #backToTop:hover { background-color: #0056b3; }
     </style>
 </head>
 <body>
 
     <div class="search-container">
-    <input type="text" id="searchInput" class="search-box" placeholder="輸入關鍵字查詢..." onkeyup="filterData()">
-    <span id="clearButton" onclick="clearSearch()">✕</span>
-</div>
+        <input type="text" id="searchInput" class="search-box" placeholder="輸入關鍵字查詢..." onkeyup="filterData()">
+        <span id="clearButton" onclick="clearSearch()">✕</span>
+    </div>
+    
     <div id="loading" class="loading">正在從雲端載入最新資料...</div>
     <div id="results"></div>
-    <!-- 回到最上方按鈕 -->
+
+    <!-- 🚀 回到最上方按鈕 -->
     <button id="backToTop" onclick="scrollToTop()" title="回到最上方">▲</button>
 
 <script>
@@ -131,17 +103,17 @@ const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XB
 
 let termMap = {}; 
 let allData = [];
-let sectionsConfig = []; // 🤖 自動產生的摺疊控制台
+let sectionsConfig = []; 
 
-// 🎨 摺疊區塊的美化色票 (程式會自動依序套用)
+// 🎨 摺疊區塊的美化色票
 const colorPalette = [
-    { bg: "#e7f3ff", textCol: "#0056b3" }, // 藍色 (第1個)
-    { bg: "#ebfbee", textCol: "#2b8a3e" }, // 綠色 (第2個)
-    { bg: "#fff5f5", textCol: "#c92a2a" }, // 紅色 (第3個)
-    { bg: "#fff4e6", textCol: "#d9480f" }, // 橘色 (第4個)
-    { bg: "#f3f0ff", textCol: "#6741d9" }, // 紫色 (第5個)
-    { bg: "#e3fafc", textCol: "#0b7285" }, // 青色 (第6個)
-    { bg: "#f8f9fa", textCol: "#495057" }  // 灰色 (第7個之後循環)
+    { bg: "#e7f3ff", textCol: "#0056b3" }, 
+    { bg: "#ebfbee", textCol: "#2b8a3e" }, 
+    { bg: "#fff5f5", textCol: "#c92a2a" }, 
+    { bg: "#fff4e6", textCol: "#d9480f" }, 
+    { bg: "#f3f0ff", textCol: "#6741d9" }, 
+    { bg: "#e3fafc", textCol: "#0b7285" }, 
+    { bg: "#f8f9fa", textCol: "#495057" }  
 ];
 
 // ==========================================
@@ -244,9 +216,7 @@ function showTermModal(termKey) {
     alert(termKey + "：\n\n" + definition);
 }
 
-// ==========================================
-// 🚀 核心：載入主資料與全自動摺疊生成
-// ==========================================
+// 載入主資料與全自動摺疊生成
 async function loadData() {
     try {
         const response = await fetch(csvUrl);
@@ -259,14 +229,11 @@ async function loadData() {
         const rows = parseCSV(text);
         sectionsConfig = [];
         
-        // 🤖 步驟 1：掃描 A100 ~ A150 (陣列索引 99~149)，自動產生摺疊設定
+        // 掃描 A100 ~ A150 產生摺疊設定
         let sectionIndex = 0;
         for (let i = 99; i < Math.min(150, rows.length); i++) {
             if (rows[i] && rows[i][0] && rows[i][0].trim() !== "") {
                 const title = rows[i][0].trim();
-                
-                // 計算對應的欄位區間 (每次 26 欄遞增)
-                // 第一個區間是 B~Z (索引 1~26)，之後是 26~52, 52~78, 78~104...
                 const startCol = sectionIndex === 0 ? 1 : sectionIndex * 26;
                 const endCol = (sectionIndex + 1) * 26;
                 const color = colorPalette[sectionIndex % colorPalette.length];
@@ -283,7 +250,6 @@ async function loadData() {
             }
         }
 
-        // 防呆機制：如果 A100 都沒寫東西，就給預設的三個摺疊
         if (sectionsConfig.length === 0) {
             sectionsConfig = [
                 { id: "logic0", title: "啟動條件", startCol: 1, endCol: 26, bg: "#e7f3ff", textCol: "#0056b3" },
@@ -292,7 +258,7 @@ async function loadData() {
             ];
         }
 
-        // 🤖 步驟 2：掃描 A2 ~ A95 (陣列索引 1~94)，抓取泵浦資料
+        // 掃描 A2 ~ A95 抓取泵浦資料
         allData = [];
         for (let i = 1; i < Math.min(95, rows.length); i++) {
             if (rows[i] && rows[i][0] && rows[i][0].trim() !== "") {
@@ -302,7 +268,6 @@ async function loadData() {
                 
                 let itemData = { name: name };
                 
-                // 依照剛剛產生的設定，自動去抓對應的欄位資料
                 sectionsConfig.forEach(sec => {
                     const extracted = formatLogic(cols.slice(sec.startCol, sec.endCol));
                     itemData[sec.id] = extracted || "無資料";
@@ -344,14 +309,12 @@ function filterData() {
 
     allData.filter(item => {
         if (item.name.toLowerCase().includes(query)) return true;
-        // 自動搜尋所有動態產生的摺疊內容
         return sectionsConfig.some(sec => item[sec.id] && item[sec.id].toLowerCase().includes(query));
     }).forEach(item => {
         let cardsHtml = `
             <div class="card">
                 <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${highlight(item.name, query)}</h3>`;
         
-        // 🤖 自動把掃描到的摺疊區塊畫出來，並套用預設色票
         sectionsConfig.forEach((sec, index) => {
             const contentWithLinks = applyTermLinks(item[sec.id]);
             const isOpen = query && item[sec.id].toLowerCase().includes(query) ? 'open' : '';
@@ -374,18 +337,11 @@ function clearSearch() {
     filterData();
 }
 
-async function initApp() {
-    document.getElementById('loading').innerText = "正在從雲端載入術語與資料...";
-    await loadTerms();
-    await loadData();
-}
-initApp();
 // ==========================================
-// 回到最上方按鈕邏輯
+// 🚀 回到最上方按鈕邏輯
 // ==========================================
 window.onscroll = function() {
     const btn = document.getElementById("backToTop");
-    // 當畫面往下滾動超過 300px 時，顯示按鈕
     if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
         btn.style.display = "block";
     } else {
@@ -394,12 +350,18 @@ window.onscroll = function() {
 };
 
 function scrollToTop() {
-    // 讓畫面「平滑」地捲動回頂部
     window.scrollTo({
         top: 0,
         behavior: 'smooth'
     });
-}    
+}
+
+async function initApp() {
+    document.getElementById('loading').innerText = "正在從雲端載入術語與資料...";
+    await loadTerms();
+    await loadData();
+}
+initApp();
 </script>
 </body>
 </html>

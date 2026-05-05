@@ -107,20 +107,60 @@ const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTUNQsJQZvAZ52XB
 let termMap = {}; 
 let allData = [];
 
+// ==========================================
+// 【新增】專業 CSV 解析器 (專治 Alt+Enter 換行與逗號)
+// ==========================================
+function parseCSV(csvText) {
+    const rows = [];
+    let currentRow = [];
+    let currentCell = '';
+    let insideQuotes = false;
+
+    for (let i = 0; i < csvText.length; i++) {
+        const char = csvText[i];
+        const nextChar = csvText[i + 1];
+
+        if (char === '"') {
+            if (insideQuotes && nextChar === '"') {
+                currentCell += '"'; // 處理雙引號跳脫
+                i++; 
+            } else {
+                insideQuotes = !insideQuotes; // 切換引號狀態
+            }
+        } else if (char === ',' && !insideQuotes) {
+            currentRow.push(currentCell); // 欄位結束
+            currentCell = '';
+        } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+            if (char === '\r' && nextChar === '\n') i++; // 略過 \r\n
+            currentRow.push(currentCell);
+            rows.push(currentRow); // 該列結束
+            currentRow = [];
+            currentCell = '';
+        } else {
+            currentCell += char;
+        }
+    }
+    currentRow.push(currentCell);
+    if (currentRow.length > 0 || currentCell !== '') rows.push(currentRow);
+    return rows;
+}
+// ==========================================
+
 // 2. 載入術語字典
 async function loadTerms() {
     try {
         const response = await fetch(termCsvUrl);
         const text = await response.text();
-        const rows = text.split(/\r?\n/);
+        
+        // 使用新的解析器
+        const rows = parseCSV(text);
+        
         termMap = {}; 
-        rows.slice(1).forEach(row => {
-            if (!row.trim()) return;
-            const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        // 跳過第一行標題，從 index 1 開始
+        rows.slice(1).forEach(cols => {
             if (cols.length >= 2) {
-                // 移除隱藏字元與引號
-                const term = cols[0].replace(/^"|"$/g, '').replace(/^\uFEFF/, '').trim();
-                const definition = cols[1].replace(/^"|"$/g, '').trim();
+                const term = cols[0].replace(/^\uFEFF/, '').trim();
+                const definition = cols[1].trim();
                 if (term) {
                     termMap[term.toUpperCase()] = definition;
                     termMap[term.toUpperCase() + "_ORIGINAL"] = term; 
@@ -133,11 +173,10 @@ async function loadTerms() {
     }
 }
 
-// 3. 處理術語點擊連結 (終極無敵版：HTML 安全切割 + 模糊空白比對)
+// 3. 處理術語點擊連結
 function applyTermLinks(text) {
     if (!text || Object.keys(termMap).length === 0) return text;
     
-    // 取出術語並按長度排序
     const terms = Object.keys(termMap)
         .filter(k => !k.includes("_ORIGINAL"))
         .map(k => termMap[k + "_ORIGINAL"])
@@ -149,22 +188,15 @@ function applyTermLinks(text) {
 
     terms.forEach(term => {
         if (!term.trim()) return;
-
-        // 轉義特殊符號
         let escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        
-        // 【關鍵魔法】將術語中的空白，轉換為正則的 \s+ 
-        // 這樣不管文字裡是 "LP Eco. Filled" 還是 "LP Eco.  Filled" 都能配對成功！
-        escapedTerm = escapedTerm.replace(/\\ /g, '\\s+');
+        escapedTerm = escapedTerm.replace(/\s+/g, '\\s+');
         
         const regex = new RegExp(`(${escapedTerm})`, 'gi');
-
-        // 安全切割 HTML，確保只替換純文字，絕不破壞既有標籤
         const parts = newText.split(/(<[^>]+>)/g);
         for (let i = 0; i < parts.length; i++) {
-            if (i % 2 === 0) { // 偶數是純文字
+            if (i % 2 === 0) {
                 parts[i] = parts[i].replace(regex, function(match) {
-                    const safeTerm = term.replace(/'/g, "\\'"); // 傳遞字典原始 key
+                    const safeTerm = term.replace(/'/g, "\\'");
                     return `<span class="term-link" onclick="event.stopPropagation(); showTermModal('${safeTerm}')">${match}</span>`;
                 });
             }
@@ -191,18 +223,22 @@ async function loadData() {
             document.getElementById('loading').innerHTML = "<b style='color:red;'>網址格式錯誤。</b>";
             return;
         }
-        const rows = text.split(/\r?\n/);
-        allData = rows.slice(1).filter(row => row.trim() !== "").map(row => {
-            const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            if (cols.length >= 1) {
-                const name = cols[0] ? cols[0].replace(/"/g, '').trim() : "未命名";
-                const startLogic = cols.slice(1, 26).map(v => v.replace(/"/g, '').trim()).filter(v => v !== "").join('<br>');
-                const autoLogic = cols.slice(26, 52).map(v => v.replace(/"/g, '').trim()).filter(v => v !== "").join('<br>');
-                const tripLogic = cols.slice(52, 78).map(v => v.replace(/"/g, '').trim()).filter(v => v !== "").join('<br>');
-                return { name, combinedLogic: startLogic || "無資料", autoStart: autoLogic || "無資料", tripLogic: tripLogic || "無資料" };
-            }
-            return null;
-        }).filter(item => item !== null);
+        
+        // 主資料也改用新的解析器，未來你主資料換行也不怕壞掉！
+        const rows = parseCSV(text);
+        
+        allData = rows.slice(1).filter(cols => cols.length > 0 && cols[0].trim() !== "").map(cols => {
+            const name = cols[0] ? cols[0].trim() : "未命名";
+            
+            // 將陣列內容合併，並把儲存格內的換行(\n)轉成網頁換行(<br>)
+            const formatLogic = (arr) => arr.map(v => v.trim().replace(/\n/g, '<br>')).filter(v => v !== "").join('<br>');
+            
+            const startLogic = formatLogic(cols.slice(1, 26));
+            const autoLogic = formatLogic(cols.slice(26, 52));
+            const tripLogic = formatLogic(cols.slice(52, 78));
+            
+            return { name, combinedLogic: startLogic || "無資料", autoStart: autoLogic || "無資料", tripLogic: tripLogic || "無資料" };
+        });
 
         document.getElementById('loading').style.display = 'none';
         filterData();
@@ -219,7 +255,6 @@ function filterData() {
     document.getElementById('clearButton').style.display = query.length > 0 ? 'block' : 'none';
     container.innerHTML = '';
 
-    // 高亮功能同樣採用 HTML 安全切割法
     const highlight = (text, q) => {
         if (!q || !text) return text;
         const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -240,7 +275,6 @@ function filterData() {
         item.autoStart.toLowerCase().includes(query) ||
         item.tripLogic.toLowerCase().includes(query)
     ).forEach(item => {
-        // 先建立術語連結
         const logicWithLinks = applyTermLinks(item.combinedLogic);
         const autoWithLinks = applyTermLinks(item.autoStart);
         const tripWithLinks = applyTermLinks(item.tripLogic);
@@ -249,7 +283,6 @@ function filterData() {
         const isAutoOpen = query && item.autoStart.toLowerCase().includes(query) ? 'open' : '';
         const isTripOpen = query && item.tripLogic.toLowerCase().includes(query) ? 'open' : '';
 
-        // 再把連結後的文字送去高亮
         container.innerHTML += `
             <div class="card">
                 <h3 style="border-left: 5px solid #007aff; padding-left: 10px;">${highlight(item.name, query)}</h3>
